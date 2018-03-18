@@ -1,0 +1,13 @@
+user hash {
+    balance: decimal
+    stocks: list of [stockname, shares]
+
+    sellorders: list of [stock, cost, shares]
+    buyorders: list of [stock, cost, shares]
+
+    selltriggers: list of [stock, shares, (cost)]
+    buytriggers: list of [stock, cost, (shares)]
+
+    balance_reserve: decimal
+    stocks_reserve: list of [stockname, shares]
+}
