@@ -10,16 +10,19 @@ import (
 	"strconv"
 	"strings"
 	"sync"
+	"sync/atomic"
 	"time"
 )
 
+var transcount uint64
+
 // go run WorkloadGen.go serverAddr:port workloadfile
 func main() {
-	if (len(os.Args) < 4) {
+	if len(os.Args) < 4 {
 		fmt.Printf("Usage: server address, workloadfile, delay(ms)")
 		return
 	}
-	
+
 	serverAddr := os.Args[1]
 	workloadFile := os.Args[2]
 	delayMs, _ := strconv.Atoi(os.Args[3])
@@ -27,6 +30,7 @@ func main() {
 
 	users := splitUsersFromFile(workloadFile)
 	fmt.Printf("Found %d users...\n", len(users))
+	go countTPS()
 
 	runRequests(serverAddr, users, delayMs)
 	fmt.Printf("Done!\n")
@@ -40,12 +44,12 @@ func runRequests(serverAddr string, users map[string][]string, delay int) {
 		wg.Add(1)
 		go func(commands []string) {
 			// Issue login before executing any commands
-			resp, err := http.PostForm("http://"+serverAddr+"/"+"LOGIN"+"/", url.Values{"username":{userName}})
+			resp, err := http.PostForm("http://"+serverAddr+"/"+"LOGIN"+"/", url.Values{"username": {userName}})
 			if err != nil {
 				fmt.Println(err)
 			}
 			resp.Body.Close()
-			
+
 			for _, command := range commands {
 				endpoint, values := parseCommand(command)
 				time.Sleep(time.Duration(delay) * time.Millisecond) // ADJUST THIS TO CHANGE DELAY
@@ -53,9 +57,10 @@ func runRequests(serverAddr string, users map[string][]string, delay int) {
 				resp, err := http.PostForm("http://"+serverAddr+"/"+endpoint+"/", values)
 				if err != nil {
 					fmt.Println(err)
-				} else {
-					resp.Body.Close()
 				}
+
+				resp.Body.Close()
+				atomic.AddUint64(&transcount, 1)
 			}
 
 			wg.Done()
@@ -122,4 +127,18 @@ func parseCommand(cmd string) (endpoint string, v url.Values) {
 	}
 
 	return endpoint, v
+}
+
+func countTPS() {
+	var tpsStart uint64
+	var tpsEnd uint64
+	elapsedtime := 0
+	for {
+		tpsStart = transcount
+		time.Sleep(time.Second)
+		tpsEnd = transcount
+
+		fmt.Printf("%d Running at %d TPS\n", elapsedtime, tpsEnd-tpsStart)
+		elapsedtime++
+	}
 }
