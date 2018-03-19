@@ -7,6 +7,8 @@ import (
 	"os"
 	"time"
 
+	"seng468/lib/triggers"
+
 	"github.com/shopspring/decimal"
 )
 
@@ -23,7 +25,7 @@ func main() {
 }
 
 // Send an alert back to the transaction server when a trigger successfully finishes
-func alertTriggerSuccess(finished trigger) {
+func alertTriggerSuccess(finished triggers.trigger) {
 	conn, err := net.DialTimeout("tcp",
 		os.Getenv("transaddr")+":"+os.Getenv("transport"),
 		time.Second,

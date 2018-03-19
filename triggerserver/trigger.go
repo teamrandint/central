@@ -18,6 +18,10 @@ func (t trigger) getSuccessString() string {
 		t.username, t.stockname, t.price, t.action)
 }
 
+func (t trigger) getPriceStr() string {
+	return t.price.String()
+}
+
 func newSellTrigger(username string, stockname string, price decimal.Decimal) trigger {
 	t := trigger{
 		username:  username,
