@@ -14,6 +14,8 @@ docker build \
 --build-arg auditport=44455 \
 --build-arg quoteclientaddr=172.20.0.7 \
 --build-arg quoteclientport=44459 \
+--build-arg triggeraddr=172.20.0.8 \
+--build-arg triggerport=44456 \
 -t teamrandint/transactionserver .
 
 cd ../WebServer
@@ -54,4 +56,4 @@ docker build \
 
 cd ..
 rm images.tar
-docker save teamrandint/quoteserver teamrandint/transactionserver teamrandint/database teamrandint/webserver teamrandint/auditserver > images.tar
+docker save teamrandint/triggerserver teamrandint/quoteserver teamrandint/transactionserver teamrandint/database teamrandint/webserver teamrandint/auditserver > images.tar

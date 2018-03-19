@@ -48,12 +48,12 @@ func setTrigger(transNum int, action string, newTrigger trigger) error {
 // CancelTrigger cancels a running trigger on the triggerserver.
 // If the given trigger could not be found, returns an error.
 func CancelTrigger(cancel trigger) error {
-
+	return nil
 }
 
 // ListRunningTriggers returns a list of all running triggers on the TriggerServer
 func ListRunningTriggers() {
-	req, err := http.Get(triggerURL + listEndpoint)
+	_, err := http.Get(triggerURL + listEndpoint)
 	if err != nil {
 		panic(err)
 	}

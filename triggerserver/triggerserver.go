@@ -5,9 +5,8 @@ import (
 	"net"
 	"net/http"
 	"os"
+	"strconv"
 	"time"
-
-	"seng468/lib/triggers"
 
 	"github.com/shopspring/decimal"
 )
@@ -25,7 +24,7 @@ func main() {
 }
 
 // Send an alert back to the transaction server when a trigger successfully finishes
-func alertTriggerSuccess(finished triggers.trigger) {
+func alertTriggerSuccess(finished trigger) {
 	conn, err := net.DialTimeout("tcp",
 		os.Getenv("transaddr")+":"+os.Getenv("transport"),
 		time.Second,
@@ -47,7 +46,7 @@ func alertTriggerSuccess(finished triggers.trigger) {
 
 func setTriggerHandler(w http.ResponseWriter, r *http.Request) {
 	action := r.FormValue("action")
-	transnum := r.FormValue("transnum")
+	transnumStr := r.FormValue("transnum")
 	username := r.FormValue("username")
 	stock := r.FormValue("stock")
 	priceStr := r.FormValue("price")
@@ -63,20 +62,26 @@ func setTriggerHandler(w http.ResponseWriter, r *http.Request) {
 		panic(err)
 	}
 
+	transnum, err := strconv.Atoi(transnumStr)
+	if err != nil {
+		w.WriteHeader(http.StatusBadRequest)
+		panic(err)
+	}
+
 	var t trigger
 	if action == "BUY" {
-		t = newBuyTrigger(username, stock, price)
+		t = newBuyTrigger(transnum, username, stock, price)
 	} else {
-		t = newSellTrigger(username, stock, price)
+		t = newSellTrigger(transnum, username, stock, price)
 	}
-	fmt.Println(transnum, t)
+	fmt.Println(t)
 
 	w.WriteHeader(http.StatusOK)
 }
 
 func cancelTriggerHandler(w http.ResponseWriter, r *http.Request) {
 	action := r.FormValue("action")
-	transnum := r.FormValue("transnum")
+	transnumStr := r.FormValue("transnum")
 	username := r.FormValue("username")
 	stock := r.FormValue("stock")
 
@@ -85,13 +90,19 @@ func cancelTriggerHandler(w http.ResponseWriter, r *http.Request) {
 		panic("Tried to post a bad action (BUY/SELL)")
 	}
 
-	t := findRunningTrigger(action, username, stock)
-	err := cancelTrigger(t)
+	transnum, err := strconv.Atoi(transnumStr)
 	if err != nil {
 		w.WriteHeader(http.StatusBadRequest)
 		panic(err)
 	}
-	fmt.Println(transnum, t)
+
+	t := findRunningTrigger(transnum, action, username, stock)
+	err = cancelTrigger(t)
+	if err != nil {
+		w.WriteHeader(http.StatusBadRequest)
+		panic(err)
+	}
+	fmt.Println(t)
 
 	w.WriteHeader(http.StatusOK)
 }
@@ -107,11 +118,16 @@ func verifyAction(action string) bool {
 	return true
 }
 
-func findRunningTrigger(action string, username string, stock string) trigger {
+func findRunningTrigger(transnum int, action string, username string, stock string) trigger {
 	dec, _ := decimal.NewFromString("11.11")
-	return newBuyTrigger(username, stock, dec)
+	return newBuyTrigger(transnum, username, stock, dec)
 }
 
+// Removes the trigger from the poller
 func cancelTrigger(t trigger) error {
 	return nil
+}
+
+func startPollingService() {
+
 }

@@ -28,13 +28,13 @@ docker run -d -p 44459:44459 \
 --ip 172.20.0.7 \
 teamrandint/quoteserver
 
-docker run -p 44458:44458 \
+docker run -d -p 44458:44458 \
 --name trans \
 --net net \
 --ip 172.20.0.6 \
 teamrandint/transactionserver
 
-docker run -d -p 44456:44456 \
+docker run -d -p 44460:44460 \
 --name trigger \
 --net net \
 --ip 172.20.0.8 \
