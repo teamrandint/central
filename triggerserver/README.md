@@ -4,25 +4,25 @@
 
 ### SET_BUY_TRIGGER
 
-params: user, stock, price
+params: transnum, user, stock, price
 
 returns: success or not
 
 ### CANCEL_SET_BUY
 
-params: user, stock
+params: transnum, user, stock
 
 returns: success or not
 
 ### SET_SELL_TRIGGER
 
-params: user, stock, price
+params: transnum, user, stock, price
 
 returns: success or not
 
 ### CANCEL_SET_SELL
 
-params: user, stock
+params: transnum, user, stock
 
 returns: success or not
 
