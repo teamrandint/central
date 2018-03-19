@@ -6,6 +6,7 @@ import (
 	"net/http"
 	"net/url"
 	"os"
+	"io/ioutil"
 	"regexp"
 	"strconv"
 	"strings"
@@ -26,6 +27,7 @@ func main() {
 	serverAddr := os.Args[1]
 	workloadFile := os.Args[2]
 	delayMs, _ := strconv.Atoi(os.Args[3])
+
 	fmt.Printf("Testing %v on serverAddr %v with delay of %vms\n", workloadFile, serverAddr, delayMs)
 
 	users := splitUsersFromFile(workloadFile)
@@ -69,7 +71,25 @@ func runRequests(serverAddr string, users map[string][]string, delay int) {
 
 	// Wait for commands, then manually post the final dumplog
 	wg.Wait()
-	http.PostForm("http://"+serverAddr+"/DUMPLOG/", url.Values{"filename": {"./output.xml"}})
+	resp, httpErr := http.PostForm("http://"+serverAddr+"/DUMPLOG/", url.Values{"filename": {"./output.xml"}})
+	if httpErr != nil {
+		panic(httpErr)
+	}
+
+	data, decodeErr := ioutil.ReadAll(resp.Body)
+	if decodeErr != nil {
+		panic(decodeErr)
+	}
+
+	file, createErr := os.Create("./output.xml")
+	defer file.Close()
+	if createErr != nil {
+		fmt.Printf("error: %v %v\n", createErr, file)
+	}
+	_, writeErr := file.Write(data)
+	if writeErr != nil {
+		panic(writeErr)
+	}
 }
 
 func splitUsersFromFile(filename string) map[string][]string {

@@ -4,7 +4,10 @@ import (
 	"bufio"
 	"fmt"
 	"log"
+	"io/ioutil"
 	"net"
+	"net/http"
+	"net/url"
 	"strconv"
 	"time"
 )
@@ -48,14 +51,32 @@ func (trans *Transmitter) MakeRequest(transNum int, message string) string {
 		// Error in connection
 		log.Print(err)
 		return "-1"
-	} else {
-		trans.connection = conn
 	}
+		
+	trans.connection = conn
 
 	// fmt.Println("Making request to transaction server")
 	fmt.Fprintf(trans.connection, message)
 	// fmt.Println("Waiting for response from transaction server")
 	reply, _ := bufio.NewReader(trans.connection).ReadString('\n')
-	// trans.connection.Close()
+	trans.connection.Close()
 	return reply
+}
+
+func (trans *Transmitter) RetrieveDumplog(filename string) []byte {
+	// auditaddr = os.Getenv("auditaddr")
+	// auditport = os.Getenv("auditport")
+	resp, err := http.PostForm("http://172.20.0.3:44455/dumpLogRetrieve", url.Values{"filename": {filename}})
+	if err != nil {
+		log.Print(err)
+	}
+
+	defer resp.Body.Close()
+
+	body, err := ioutil.ReadAll(resp.Body)
+	if err != nil {
+		fmt.Println(err)
+	}
+
+	return body
 }
