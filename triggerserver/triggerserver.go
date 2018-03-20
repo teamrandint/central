@@ -19,7 +19,7 @@ type runningTriggersKey struct {
 }
 
 var runningTriggers = make(map[runningTriggersKey]trigger)
-var runningTriggersLock sync.RWMutex
+var runningTriggersLock sync.Mutex
 
 var successListener = make(chan trigger)
 
@@ -79,7 +79,7 @@ func setTriggerHandler(w http.ResponseWriter, r *http.Request) {
 
 func cancelTriggerHandler(w http.ResponseWriter, r *http.Request) {
 	action := r.FormValue("action")
-	transnumStr := r.FormValue("transnum")
+	//transnumStr := r.FormValue("transnum")
 	username := r.FormValue("username")
 	stock := r.FormValue("stock")
 
@@ -88,29 +88,35 @@ func cancelTriggerHandler(w http.ResponseWriter, r *http.Request) {
 		panic("Tried to post a bad action (BUY/SELL)")
 	}
 
-	transnum, err := strconv.Atoi(transnumStr)
-	if err != nil {
-		w.WriteHeader(http.StatusBadRequest)
-		panic(err)
-	}
+	//transnum, err := strconv.Atoi(transnumStr)
+	//if err != nil {
+	//	w.WriteHeader(http.StatusBadRequest)
+	//	panic(err)
+	//}
 
-	t := findRunningTrigger(transnum, action, username, stock)
-	err = cancelTrigger(t)
+	trig := trigger{
+		action:    action,
+		username:  username,
+		stockname: stock,
+	}
+	err := cancelTrigger(trig)
 	if err != nil {
 		w.WriteHeader(http.StatusBadRequest)
 		panic(err)
 	}
-	fmt.Println(t)
+	fmt.Println(trig)
 
 	w.WriteHeader(http.StatusOK)
 }
 
 func startSuccessListener() {
-	select {
-	case trig := <-successListener:
-		fmt.Println("Closing successful trigger: ", trig)
-		go cancelTrigger(trig)
-		go alertTriggerSuccess(trig)
+	for {
+		select {
+		case trig := <-successListener:
+			fmt.Println("Closing successful trigger: ", trig)
+			go cancelTrigger(trig)
+			go alertTriggerSuccess(trig)
+		}
 	}
 }
 
@@ -137,9 +143,9 @@ func alertTriggerSuccess(t trigger) {
 }
 
 func getRunningTriggersHandler(w http.ResponseWriter, r *http.Request) {
-	runningTriggersLock.RLock()
+	runningTriggersLock.Lock()
 	fmt.Fprintln(w, runningTriggers)
-	runningTriggersLock.RUnlock()
+	runningTriggersLock.Unlock()
 }
 
 func verifyAction(action string) bool {
@@ -149,21 +155,15 @@ func verifyAction(action string) bool {
 	return true
 }
 
-func findRunningTrigger(transnum int, action string, username string, stock string) trigger {
-	runningTriggersLock.RLock()
-	defer runningTriggersLock.RUnlock()
-	return runningTriggers[runningTriggersKey{action, stock, username}]
-}
-
 // Removes the trigger from the poller
 func cancelTrigger(t trigger) error {
 	runningTriggersLock.Lock()
+	defer runningTriggersLock.Unlock()
 	_, ok := runningTriggers[runningTriggersKey{t.action, t.stockname, t.username}]
 	if !ok {
 		return errors.New("Can't find running trigger")
 	}
 	runningTriggers[runningTriggersKey{t.action, t.stockname, t.username}].Cancel()
 	delete(runningTriggers, runningTriggersKey{t.action, t.stockname, t.username})
-	runningTriggersLock.Unlock()
 	return nil
 }

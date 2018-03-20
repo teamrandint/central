@@ -34,7 +34,6 @@ func (t trigger) String() string {
 
 func (t trigger) StartPolling() {
 	if t.checkTriggerStatus() {
-		t.Cancel()
 		successListener <- t
 		return
 	}
@@ -47,7 +46,6 @@ func (t trigger) StartPolling() {
 			return
 		case <-ticker.C:
 			if t.checkTriggerStatus() {
-				t.Cancel()
 				successListener <- t
 				return
 			}
@@ -58,6 +56,7 @@ func (t trigger) StartPolling() {
 
 func (t trigger) Cancel() {
 	t.done <- true
+	return
 }
 
 func (t trigger) checkTriggerStatus() bool {
@@ -78,9 +77,9 @@ func (t trigger) hitQuoteServer() decimal.Decimal {
 func (t trigger) checkResult(result decimal.Decimal) bool {
 	switch t.action {
 	case "BUY":
-		return t.price.LessThanOrEqual(result)
-	case "SELL":
 		return t.price.GreaterThanOrEqual(result)
+	case "SELL":
+		return t.price.LessThanOrEqual(result)
 	}
 
 	panic("Should never reach here...")

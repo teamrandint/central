@@ -29,7 +29,7 @@ func Query(user string, stock string, transNum int) (decimal.Decimal, error) {
 		return decimal.Decimal{}, err
 	}
 	amount, err := ioutil.ReadAll(resp.Body)
-	fmt.Println(string(amount))
+	fmt.Println("Query: ", user, stock, "=", string(amount))
 	if err != nil {
 		fmt.Printf("Error reading body: %s", err.Error())
 		return decimal.Decimal{}, err
