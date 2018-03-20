@@ -135,19 +135,13 @@ func cancelTriggerHandler(w http.ResponseWriter, r *http.Request) {
 	//	panic(err)
 	//}
 
-	trig := trigger{
-		action:    action,
-		username:  username,
-		stockname: stock,
-	}
-	err := cancelTrigger(trig)
+	cancelledTrigger, err := cancelTrigger(triggersKey{action, stock, username})
 	if err != nil {
 		w.WriteHeader(http.StatusBadRequest)
 		panic(err)
 	}
-	fmt.Println(trig)
-
-	w.WriteHeader(http.StatusOK)
+	fmt.Println("CANCELLED: ", cancelledTrigger)
+	w.Write([]byte(cancelledTrigger.String()))
 }
 
 func startSuccessListener() {
@@ -202,24 +196,25 @@ func verifyAction(action string) bool {
 	return true
 }
 
-// Removes the trigger from the poller
-func cancelTrigger(t trigger) error {
+// Removes the trigger from the poller, returns the removed key and any errors
+func cancelTrigger(t triggersKey) (trigger, error) {
 	runningTriggersLock.Lock()
 	waitingTriggersLock.Lock()
 	defer runningTriggersLock.Unlock()
 	defer waitingTriggersLock.Unlock()
 
-	_, running := runningTriggers[triggersKey{t.action, t.stockname, t.username}]
-	_, waiting := waitingTriggers[triggersKey{t.action, t.stockname, t.username}]
+	trigger, running := runningTriggers[t]
 	if running {
-		runningTriggers[triggersKey{t.action, t.stockname, t.username}].Cancel()
-		delete(runningTriggers, triggersKey{t.action, t.stockname, t.username})
-		return nil
-	}
-	if waiting {
-		delete(waitingTriggers, triggersKey{t.action, t.stockname, t.username})
-		return nil
+		runningTriggers[t].Cancel()
+		delete(runningTriggers, t)
+		return trigger, nil
 	}
 
-	return errors.New("Can't find waiting or running trigger to cancel")
+	trigger, waiting := waitingTriggers[t]
+	if waiting {
+		delete(waitingTriggers, t)
+		return trigger, nil
+	}
+
+	return trigger, errors.New("Can't find waiting or running trigger to cancel")
 }
