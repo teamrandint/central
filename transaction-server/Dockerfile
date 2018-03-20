@@ -25,10 +25,10 @@ ARG auditaddr
 ENV auditaddr=$auditaddr
 ARG auditport
 ENV auditport=$auditport
-ARG quoteclientaddr
-ENV quoteclientaddr=$quoteclientaddr
-ARG quoteclientport
-ENV quoteclientport=$quoteclientport
+ARG quoteaddr
+ENV quoteaddr=$quoteaddr
+ARG quoteport
+ENV quoteport=$quoteport
 
 WORKDIR /app
 COPY --from=build-env /go/src/seng468/transaction-server/transactionserve /app/

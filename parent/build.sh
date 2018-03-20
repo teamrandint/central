@@ -12,8 +12,8 @@ docker build \
 --build-arg dbport=44457 \
 --build-arg auditaddr=172.20.0.3 \
 --build-arg auditport=44455 \
---build-arg quoteclientaddr=172.20.0.7 \
---build-arg quoteclientport=44459 \
+--build-arg quoteaddr=172.20.0.7 \
+--build-arg quoteport=44459 \
 --build-arg triggeraddr=172.20.0.8 \
 --build-arg triggerport=44456 \
 -t teamrandint/transactionserver .
@@ -36,10 +36,13 @@ docker build \
 
 cd ../quoteserver
 docker build \
+--add-host quoteserve.seng:172.20.0.1 \
 --build-arg quoteaddr=172.20.0.7 \
 --build-arg quoteport=44459 \
 --build-arg auditaddr=172.20.0.3 \
 --build-arg auditport=44455 \
+--build-arg legacyquoteaddr=172.20.0.1 \
+--build-arg legacyquoteport=4444 \
 -t teamrandint/quoteserver .
 
 cd ../triggerserver

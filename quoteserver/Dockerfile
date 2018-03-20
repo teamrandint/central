@@ -17,10 +17,15 @@ ENV quoteport=$quoteport
 ARG auditaddr
 ENV auditaddr=$auditaddr
 ARG auditport
-ENV auditport=$auditport
+ENV auditport=$
+
+ARG legacyquoteaddr
+ENV legacyquoteaddr=$legacyquoteaddr
+ARG legacyquoteport
+ENV legacyquoteport=$legacyquoteport
 
 WORKDIR /app
 COPY --from=build-env /go/src/seng468/quoteserver/quoteserver /app/
 EXPOSE 44459-44459
-EXPOSE 4450
+EXPOSE 4444
 ENTRYPOINT ./quoteserver
