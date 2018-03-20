@@ -205,12 +205,21 @@ func verifyAction(action string) bool {
 // Removes the trigger from the poller
 func cancelTrigger(t trigger) error {
 	runningTriggersLock.Lock()
+	waitingTriggersLock.Lock()
 	defer runningTriggersLock.Unlock()
-	_, ok := runningTriggers[triggersKey{t.action, t.stockname, t.username}]
-	if !ok {
-		return errors.New("Can't find running trigger")
+	defer waitingTriggersLock.Unlock()
+
+	_, running := runningTriggers[triggersKey{t.action, t.stockname, t.username}]
+	_, waiting := waitingTriggers[triggersKey{t.action, t.stockname, t.username}]
+	if running {
+		runningTriggers[triggersKey{t.action, t.stockname, t.username}].Cancel()
+		delete(runningTriggers, triggersKey{t.action, t.stockname, t.username})
+		return nil
 	}
-	runningTriggers[triggersKey{t.action, t.stockname, t.username}].Cancel()
-	delete(runningTriggers, triggersKey{t.action, t.stockname, t.username})
-	return nil
+	if waiting {
+		delete(waitingTriggers, triggersKey{t.action, t.stockname, t.username})
+		return nil
+	}
+
+	return errors.New("Can't find waiting or running trigger to cancel")
 }
