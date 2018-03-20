@@ -28,6 +28,18 @@ func (t trigger) String() string {
 	return str
 }
 
+func (t trigger) GetCost() decimal.Decimal {
+	return t.amount.Mul(t.price)
+}
+
+func (t trigger) GetAmount() decimal.Decimal {
+	return t.amount
+}
+
+func (t trigger) GetPrice() decimal.Decimal {
+	return t.price
+}
+
 func newSellTrigger(transNum int, username string, stockname string, amount decimal.Decimal) trigger {
 	t := trigger{
 		transNum:  transNum,
