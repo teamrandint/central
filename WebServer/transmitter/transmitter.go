@@ -8,6 +8,7 @@ import (
 	"net"
 	"net/http"
 	"net/url"
+	"os"
 	"strconv"
 	"time"
 )
@@ -64,9 +65,8 @@ func (trans *Transmitter) MakeRequest(transNum int, message string) string {
 }
 
 func (trans *Transmitter) RetrieveDumplog(filename string) []byte {
-	// auditaddr = os.Getenv("auditaddr")
-	// auditport = os.Getenv("auditport")
-	resp, err := http.PostForm("http://172.20.0.3:44455/dumpLogRetrieve", url.Values{"filename": {filename}})
+	auditAddr := "http://" + os.Getenv("auditaddr") + ":" + os.Getenv("auditport")
+	resp, err := http.PostForm(auditAddr + "/dumpLogRetrieve", url.Values{"filename": {filename}})
 	if err != nil {
 		log.Print(err)
 	}

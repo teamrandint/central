@@ -11,7 +11,6 @@ import (
 
 	"github.com/shopspring/decimal"
 	"golang.org/x/sync/syncmap"
-	"github.com/pkg/profile"
 )
 
 // TransactionServer holds the main components of the module itself
@@ -26,14 +25,13 @@ type TransactionServer struct {
 }
 
 func main() {
-	defer profile.Start().Stop()
 	serverAddr := os.Getenv("transaddr") + ":" + os.Getenv("transport")
 	databaseAddr := "tcp"
 	databasePort := os.Getenv("dbaddr") + ":" + os.Getenv("dbport")
 	auditAddr := "http://" + os.Getenv("auditaddr") + ":" + os.Getenv("auditport")
 
 	server := socketserver.NewSocketServer(serverAddr)
-	database := database.RedisDatabase{Addr: databaseAddr, Port: databasePort}
+	database := database.RedisDatabase{Addr: databaseAddr, Port: databasePort, BatchSize: 10, pollRate: 20, BatchResults: make(chan struct{interface{}, error})}
 	logger := logger.AuditLogger{Addr: auditAddr}
 	buyTriggers := new(syncmap.Map)
 	sellTriggers := new(syncmap.Map)
@@ -48,6 +46,7 @@ func main() {
 		SellTriggers: sellTriggers,
 	}
 
+	go database.BatchWorker()
 	server.Route("ADD,<user>,<amount>", ts.Add)
 	server.Route("QUOTE,<user>,<stock>", ts.Quote)
 	server.Route("BUY,<user>,<stock>,<amount>", ts.Buy)
@@ -63,7 +62,6 @@ func main() {
 	server.Route("SET_SELL_TRIGGER,<user>,<stock>,<amount>", ts.SetSellTrigger)
 	server.Route("CANCEL_SET_SELL,<user>,<stock>", ts.CancelSetSell)
 	server.Route("DUMPLOG,<user>,<filename>", ts.DumpLogUser)
-	server.Route("DUMPLOG,<filename>", ts.DumpLog)
 	server.Route("DISPLAY_SUMMARY,<user>", ts.DisplaySummary)
 	server.Run()
 }

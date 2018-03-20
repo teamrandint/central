@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"strconv"
 	"strings"
+	"time"
 
 	"github.com/garyburd/redigo/redis"
 
@@ -35,12 +36,32 @@ type UserDatabase interface {
 	PopBuy(user string) (stock string, cost decimal.Decimal, shares int, err error)
 	PushSell(user string, stock string, cost decimal.Decimal, shares int) error
 	PopSell(user string) (stock string, cost decimal.Decimal, shares int, err error)
+
+	BatchWorker()
+}
+
+// Typical structure of a redis command
+type Query struct {
+	Command string
+	UserString string
+	ParamOne string
+	ParamTwo string
+	cost decimal.Decimal
+}
+
+type Response struct {
+	r interface{}
+	err error
 }
 
 // RedisDatabase holds the address of the redisDB
 type RedisDatabase struct {
 	Addr string
 	Port string
+	Batch []*Query
+	BatchSize int
+	PollRate int
+	BatchResults chan Response
 }
 
 func (u RedisDatabase) getConn() redis.Conn {
@@ -105,11 +126,13 @@ func (u RedisDatabase) pushOrder(transType string, user string,
 		return errors.New("Bad transaction type of " + transType)
 	}
 
-	encoded := u.encodeOrder(stock, cost, shares)
-
-	conn := u.getConn()
-	_, err := redis.Int64(conn.Do("RPUSH", user+accountSuffix, encoded))
-	conn.Close()
+	query := new(Query)
+	query.Command = "RPUSH"
+	query.UserString = user+accountSuffix
+	query.ParamOne = u.encodeOrder(stock, cost, shares)
+	u.Batch = append(u.Batch, query)
+	resp := <- u.BatchResults
+	_, err := redis.Int64(resp.r, resp.err)
 	return err
 }
 
@@ -122,10 +145,12 @@ func (u RedisDatabase) popOrder(transType string, user string) (stock string, co
 	} else {
 		return stock, cost, shares, errors.New("Bad transaction type of " + transType)
 	}
-
-	conn := u.getConn()
-	recv, err := redis.String(conn.Do("RPOP", user+accountSuffix))
-	conn.Close()
+	query := new(Query)
+	query.Command = "RPOP"
+	query.UserString = user+accountSuffix
+	u.Batch = append(u.Batch, query)
+	resp := <- u.BatchResults
+	recv, err := redis.String(resp.r, resp.err)
 
 	stock, cost, shares = u.decodeOrder(recv)
 	return stock, cost, shares, err
@@ -207,16 +232,20 @@ func (u RedisDatabase) fundAction(action string, user string,
 		return decimal.NewFromFloat(0.0), errors.New("Bad action attempt on funds")
 	}
 
-	conn := u.getConn()
+	query := new(Query)
+	query.Command = command
+	query.UserString = user+accountSuffix
+	if action != "Get" {
+		query.cost = amount
+	}
+
+	u.Batch = append(u.Batch, query)
+	// Now wait until query is executed.
 	var r float64
 	var err error
-	if action != "Get" {
-		r, err = redis.Float64(conn.Do(command, user+accountSuffix, amount))
-	} else {
-		r, err = redis.Float64(conn.Do(command, user+accountSuffix))
+	resp := <- u.BatchResults
+	r, err = redis.Float64(resp.r, resp.err)
 
-	}
-	conn.Close()
 	return decimal.NewFromFloat(r), err
 }
 
@@ -270,16 +299,21 @@ func (u RedisDatabase) stockAction(action string, user string,
 		return 0, errors.New("Bad action attempt on stocks")
 	}
 
-	conn := u.getConn()
+	query := new(Query)
+	query.Command = command
+	query.UserString = user+accountSuffix
+	query.ParamOne = stock
+	if action != "Get" {
+		query.ParamTwo = string(amount)
+	}
+
+	u.Batch = append(u.Batch, query)
+
 	var r int
 	var err error
-	if action != "Get" {
-		r, err = redis.Int(conn.Do(command, user+accountSuffix, stock, amount))
-	} else {
-		r, err = redis.Int(conn.Do(command, user+accountSuffix, stock))
+	resp := <- u.BatchResults
+	r, err = redis.Int(resp.r, resp.err)
 
-	}
-	conn.Close()
 	return r, err
 }
 
@@ -289,4 +323,33 @@ func (u RedisDatabase) DeleteKey(key string) {
 	conn := u.getConn()
 	conn.Do("DEL", key)
 	conn.Close()
+}
+
+func (u RedisDatabase) BatchWorker() {
+	prevTime := time.Now()
+	for {
+		// Batch size has been reached or poll time has passed, 
+		if (len(u.Batch) == u.BatchSize) || (time.Now().Sub(prevTime) == time.Millisecond * time.Duration(u.PollRate)) {
+			conn := u.getConn()
+			for _, query := range u.Batch {
+				conn.Send(query.Command, query.UserString, query.ParamOne, query.ParamTwo)
+			}
+			conn.Flush()
+
+			for i := 0; i < len(u.Batch); i++ {
+
+				r, err := conn.Receive()
+				// Recieve results from queries
+				resp := Response{r, err}
+				// Notify waiting processes of batch execution
+				u.BatchResults <- resp
+			}
+
+			// Clear the batch que
+			u.Batch = nil
+			// Reset the timer
+			prevTime = time.Now()
+			conn.Close()
+		}
+	}
 }
