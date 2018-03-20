@@ -2,7 +2,6 @@ package triggerclient
 
 import (
 	"fmt"
-	"strconv"
 
 	"github.com/shopspring/decimal"
 )
@@ -10,7 +9,7 @@ import (
 type trigger struct {
 	username  string
 	stockname string
-	amount    int
+	amount    decimal.Decimal
 	price     decimal.Decimal
 	action    string
 	transNum  int
@@ -21,7 +20,7 @@ func (t trigger) getPriceStr() string {
 }
 
 func (t trigger) getAmountStr() string {
-	return strconv.Itoa(t.amount)
+	return t.amount.String()
 }
 
 func (t trigger) String() string {
@@ -29,7 +28,7 @@ func (t trigger) String() string {
 	return str
 }
 
-func newSellTrigger(transNum int, username string, stockname string, amount int) trigger {
+func newSellTrigger(transNum int, username string, stockname string, amount decimal.Decimal) trigger {
 	t := trigger{
 		transNum:  transNum,
 		username:  username,
@@ -41,7 +40,7 @@ func newSellTrigger(transNum int, username string, stockname string, amount int)
 	return t
 }
 
-func newBuyTrigger(transNum int, username string, stockname string, amount int) trigger {
+func newBuyTrigger(transNum int, username string, stockname string, amount decimal.Decimal) trigger {
 	t := trigger{
 		transNum:  transNum,
 		username:  username,

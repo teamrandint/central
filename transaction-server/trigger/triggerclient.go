@@ -24,13 +24,13 @@ const (
 
 // TriggerFunctions are all of the functionality needed to support the trigger
 type TriggerFunctions interface {
-	SetNewSellTrigger(transNum int, username string, stock string, amount int) error
+	SetNewSellTrigger(transNum int, username string, stock string, amount decimal.Decimal) error
 	SetSellTrigger(transNum int, trig trigger) error
 	StartSellTrigger(transNum int, trig trigger) error
 	StartNewSellTrigger(transNum int, username string, stock string, price decimal.Decimal) error
 	CancelSellTrigger(transNum int, username string, stock string) (trigger, error)
 
-	SetNewBuyTrigger(transNum int, username string, stock string, amount int) error
+	SetNewBuyTrigger(transNum int, username string, stock string, amount decimal.Decimal) error
 	SetBuyTrigger(transNum int, trig trigger) error
 	StartBuyTrigger(transNum int, trig trigger) error
 	StartNewBuyTrigger(transNum int, username string, stock string, price decimal.Decimal) error
@@ -44,7 +44,7 @@ type TriggerClient struct {
 }
 
 // SetNewSellTrigger adds a new sell trigger to the triggerserver
-func (tc TriggerClient) SetNewSellTrigger(transNum int, username string, stock string, amount int) error {
+func (tc TriggerClient) SetNewSellTrigger(transNum int, username string, stock string, amount decimal.Decimal) error {
 	trig := newSellTrigger(transNum, username, stock, amount)
 	return tc.setTrigger(transNum, trig)
 }
@@ -83,7 +83,7 @@ func (tc TriggerClient) CancelSellTrigger(transNum int, username string, stock s
 }
 
 // SetNewBuyTrigger adds a new sell trigger to the triggerserver
-func (tc TriggerClient) SetNewBuyTrigger(transNum int, username string, stock string, amount int) error {
+func (tc TriggerClient) SetNewBuyTrigger(transNum int, username string, stock string, amount decimal.Decimal) error {
 	trig := newBuyTrigger(transNum, username, stock, amount)
 	return tc.setTrigger(transNum, trig)
 }
@@ -196,14 +196,14 @@ func (tc TriggerClient) getTriggerFromResponse(resp *http.Response) trigger {
 
 // "{%v %v %v %v %v}", t.username, t.stockname, t.getPriceStr(), t.amount, t.action
 func (tc TriggerClient) parseTriggerFromString(trigStr string) trigger {
-	re := regexp.MustCompile(`{(\w+) (\w+) (\d+.\d+) (\d+) (\w+)}`)
+	re := regexp.MustCompile(`{(\w+) (\w+) (\d+.\d+) (\d+.\d+) (\w+)}`)
 	matches := re.FindStringSubmatch(trigStr)
 
 	price, err := decimal.NewFromString(matches[3])
 	if err != nil {
 		panic(err)
 	}
-	amount, err := strconv.Atoi(matches[4])
+	amount, err := decimal.NewFromString(matches[4])
 	if err != nil {
 		panic(err)
 	}
