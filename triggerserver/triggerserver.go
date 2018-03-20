@@ -126,7 +126,7 @@ func alertTriggerSuccess(t trigger) {
 		os.Getenv("transaddr")+":"+os.Getenv("transport"),
 		time.Second*15,
 	)
-	if err != nil {
+	if err != nil { // trans server down? retry
 		panic(err)
 	}
 
