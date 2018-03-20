@@ -25,16 +25,16 @@ const (
 // TriggerFunctions are all of the functionality needed to support the trigger
 type TriggerFunctions interface {
 	SetNewSellTrigger(transNum int, username string, stock string, amount decimal.Decimal) error
-	SetSellTrigger(transNum int, trig trigger) error
-	StartSellTrigger(transNum int, trig trigger) error
+	SetSellTrigger(transNum int, trig Trigger) error
+	StartSellTrigger(transNum int, trig Trigger) error
 	StartNewSellTrigger(transNum int, username string, stock string, price decimal.Decimal) error
-	CancelSellTrigger(transNum int, username string, stock string) (trigger, error)
+	CancelSellTrigger(transNum int, username string, stock string) (Trigger, error)
 
 	SetNewBuyTrigger(transNum int, username string, stock string, amount decimal.Decimal) error
-	SetBuyTrigger(transNum int, trig trigger) error
-	StartBuyTrigger(transNum int, trig trigger) error
+	SetBuyTrigger(transNum int, trig Trigger) error
+	StartBuyTrigger(transNum int, trig Trigger) error
 	StartNewBuyTrigger(transNum int, username string, stock string, price decimal.Decimal) error
-	CancelBuyTrigger(transNum int, username string, stock string) (trigger, error)
+	CancelBuyTrigger(transNum int, username string, stock string) (Trigger, error)
 
 	ListRunningTriggers()
 }
@@ -50,18 +50,18 @@ func (tc TriggerClient) SetNewSellTrigger(transNum int, username string, stock s
 }
 
 // SetSellTrigger adds a new sell trigger to the triggerserver
-func (tc TriggerClient) SetSellTrigger(transNum int, trig trigger) error {
+func (tc TriggerClient) SetSellTrigger(transNum int, trig Trigger) error {
 	return tc.setTrigger(transNum, trig)
 }
 
 // StartSellTrigger adds a new sell trigger to the triggerserver
-func (tc TriggerClient) StartSellTrigger(transNum int, trig trigger) error {
+func (tc TriggerClient) StartSellTrigger(transNum int, trig Trigger) error {
 	return tc.startTrigger(transNum, trig)
 }
 
 // StartNewSellTrigger starts an existing sell trigger on the triggerserver
 func (tc TriggerClient) StartNewSellTrigger(transNum int, username string, stock string, price decimal.Decimal) error {
-	trig := trigger{
+	trig := Trigger{
 		transNum:  transNum,
 		username:  username,
 		stockname: stock,
@@ -72,8 +72,8 @@ func (tc TriggerClient) StartNewSellTrigger(transNum int, username string, stock
 }
 
 // CancelSellTrigger attempts to cancel an existing sell trigger on the server
-func (tc TriggerClient) CancelSellTrigger(transNum int, username string, stock string) (trigger, error) {
-	trig := trigger{
+func (tc TriggerClient) CancelSellTrigger(transNum int, username string, stock string) (Trigger, error) {
+	trig := Trigger{
 		transNum:  transNum,
 		username:  username,
 		stockname: stock,
@@ -89,18 +89,18 @@ func (tc TriggerClient) SetNewBuyTrigger(transNum int, username string, stock st
 }
 
 // SetBuyTrigger adds a new Buy trigger to the triggerserver
-func (tc TriggerClient) SetBuyTrigger(transNum int, trig trigger) error {
+func (tc TriggerClient) SetBuyTrigger(transNum int, trig Trigger) error {
 	return tc.setTrigger(transNum, trig)
 }
 
 // StartBuyTrigger adds a new buy trigger to the triggerserver
-func (tc TriggerClient) StartBuyTrigger(transNum int, trig trigger) error {
+func (tc TriggerClient) StartBuyTrigger(transNum int, trig Trigger) error {
 	return tc.startTrigger(transNum, trig)
 }
 
 // StartNewBuyTrigger starts an existing Buy trigger on the triggerserver
 func (tc TriggerClient) StartNewBuyTrigger(transNum int, username string, stock string, price decimal.Decimal) error {
-	trig := trigger{
+	trig := Trigger{
 		transNum:  transNum,
 		username:  username,
 		stockname: stock,
@@ -110,9 +110,9 @@ func (tc TriggerClient) StartNewBuyTrigger(transNum int, username string, stock 
 	return tc.startTrigger(transNum, trig)
 }
 
-// Attempts to cancel an existing Buy trigger on the server
-func (tc TriggerClient) CancelBuyTrigger(transNum int, username string, stock string) (trigger, error) {
-	trig := trigger{
+// CancelBuyTrigger attempts to cancel an existing Buy trigger on the server
+func (tc TriggerClient) CancelBuyTrigger(transNum int, username string, stock string) (Trigger, error) {
+	trig := Trigger{
 		transNum:  transNum,
 		username:  username,
 		stockname: stock,
@@ -123,7 +123,7 @@ func (tc TriggerClient) CancelBuyTrigger(transNum int, username string, stock st
 
 // setTrigger adds a new trigger to the triggerserver.
 // Action is either 'BUY' or 'SELL'
-func (tc TriggerClient) setTrigger(transNum int, newTrigger trigger) error {
+func (tc TriggerClient) setTrigger(transNum int, newTrigger Trigger) error {
 	values := url.Values{
 		"action":   {newTrigger.action},
 		"transnum": {strconv.Itoa(transNum)},
@@ -140,7 +140,7 @@ func (tc TriggerClient) setTrigger(transNum int, newTrigger trigger) error {
 }
 
 // startTrigger starts an existing trigger on the triggerserver.
-func (tc TriggerClient) startTrigger(transNum int, newTrigger trigger) error {
+func (tc TriggerClient) startTrigger(transNum int, newTrigger Trigger) error {
 	values := url.Values{
 		"action":   {newTrigger.action},
 		"transnum": {strconv.Itoa(transNum)},
@@ -160,7 +160,7 @@ func (tc TriggerClient) startTrigger(transNum int, newTrigger trigger) error {
 // Action is either 'BUY' or 'SELL'
 // If the given trigger could not be found, returns an error.
 // Should return the cancelled triggers details
-func (tc TriggerClient) cancelTrigger(transNum int, cancel trigger) (trigger, error) {
+func (tc TriggerClient) cancelTrigger(transNum int, cancel Trigger) (Trigger, error) {
 	values := url.Values{
 		"action":   {cancel.action},
 		"transnum": {strconv.Itoa(transNum)},
@@ -169,7 +169,7 @@ func (tc TriggerClient) cancelTrigger(transNum int, cancel trigger) (trigger, er
 	}
 	resp, err := http.PostForm(triggerURL+cancelEndpoint, values)
 	if err != nil {
-		return trigger{}, err
+		return Trigger{}, err
 	}
 
 	trig := tc.getTriggerFromResponse(resp)
@@ -185,7 +185,7 @@ func (tc TriggerClient) ListRunningTriggers() {
 	}
 }
 
-func (tc TriggerClient) getTriggerFromResponse(resp *http.Response) trigger {
+func (tc TriggerClient) getTriggerFromResponse(resp *http.Response) Trigger {
 	bodyBytes, err := ioutil.ReadAll(resp.Body)
 	if err != nil {
 		panic(err)
@@ -195,7 +195,7 @@ func (tc TriggerClient) getTriggerFromResponse(resp *http.Response) trigger {
 }
 
 // "{%v %v %v %v %v}", t.username, t.stockname, t.getPriceStr(), t.amount, t.action
-func (tc TriggerClient) parseTriggerFromString(trigStr string) trigger {
+func (tc TriggerClient) parseTriggerFromString(trigStr string) Trigger {
 	re := regexp.MustCompile(`{(\w+) (\w+) (\d+.\d+) (\d+.\d+) (\w+)}`)
 	matches := re.FindStringSubmatch(trigStr)
 
@@ -208,7 +208,7 @@ func (tc TriggerClient) parseTriggerFromString(trigStr string) trigger {
 		panic(err)
 	}
 
-	trig := trigger{
+	trig := Trigger{
 		username:  matches[1],
 		stockname: matches[2],
 		price:     price,

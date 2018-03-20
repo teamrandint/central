@@ -6,7 +6,7 @@ import (
 	"github.com/shopspring/decimal"
 )
 
-type trigger struct {
+type Trigger struct {
 	username  string
 	stockname string
 	amount    decimal.Decimal
@@ -15,33 +15,33 @@ type trigger struct {
 	transNum  int
 }
 
-func (t trigger) getPriceStr() string {
+func (t Trigger) getPriceStr() string {
 	return t.price.String()
 }
 
-func (t trigger) getAmountStr() string {
+func (t Trigger) getAmountStr() string {
 	return t.amount.String()
 }
 
-func (t trigger) String() string {
+func (t Trigger) String() string {
 	str := fmt.Sprintf("{%v %v %v %v %v}", t.username, t.stockname, t.getPriceStr(), t.amount, t.action)
 	return str
 }
 
-func (t trigger) GetCost() decimal.Decimal {
+func (t Trigger) GetCost() decimal.Decimal {
 	return t.amount.Mul(t.price)
 }
 
-func (t trigger) GetAmount() decimal.Decimal {
+func (t Trigger) GetAmount() decimal.Decimal {
 	return t.amount
 }
 
-func (t trigger) GetPrice() decimal.Decimal {
+func (t Trigger) GetPrice() decimal.Decimal {
 	return t.price
 }
 
-func newSellTrigger(transNum int, username string, stockname string, amount decimal.Decimal) trigger {
-	t := trigger{
+func newSellTrigger(transNum int, username string, stockname string, amount decimal.Decimal) Trigger {
+	t := Trigger{
 		transNum:  transNum,
 		username:  username,
 		stockname: stockname,
@@ -52,8 +52,8 @@ func newSellTrigger(transNum int, username string, stockname string, amount deci
 	return t
 }
 
-func newBuyTrigger(transNum int, username string, stockname string, amount decimal.Decimal) trigger {
-	t := trigger{
+func newBuyTrigger(transNum int, username string, stockname string, amount decimal.Decimal) Trigger {
+	t := Trigger{
 		transNum:  transNum,
 		username:  username,
 		stockname: stockname,
