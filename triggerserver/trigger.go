@@ -11,6 +11,7 @@ import (
 type trigger struct {
 	username        string
 	stockname       string
+	amount          int
 	price           decimal.Decimal
 	action          string
 	transNum        int
@@ -19,8 +20,8 @@ type trigger struct {
 }
 
 func (t trigger) getSuccessString() string {
-	return fmt.Sprintf("TRIGGER_SUCCESS,%v,%v,%v,%v\n",
-		t.username, t.stockname, t.price, t.action)
+	return fmt.Sprintf("TRIGGER_SUCCESS,%v,%v,%v,%v,%v\n",
+		t.username, t.stockname, t.price, t.amount, t.action)
 }
 
 func (t trigger) getPriceStr() string {
@@ -28,7 +29,7 @@ func (t trigger) getPriceStr() string {
 }
 
 func (t trigger) String() string {
-	str := fmt.Sprintf("{%v %v %v %v}", t.username, t.stockname, t.getPriceStr(), t.action)
+	str := fmt.Sprintf("{%v %v %v %v %v}", t.username, t.stockname, t.getPriceStr(), t.amount, t.action)
 	return str
 }
 
@@ -85,12 +86,12 @@ func (t trigger) checkResult(result decimal.Decimal) bool {
 	panic("Should never reach here...")
 }
 
-func newSellTrigger(sls chan trigger, transNum int, username string, stockname string, price decimal.Decimal) trigger {
+func newSellTrigger(sls chan trigger, transNum int, username string, stockname string, amount int) trigger {
 	t := trigger{
 		transNum:        transNum,
 		username:        username,
 		stockname:       stockname,
-		price:           price,
+		amount:          amount,
 		action:          "SELL",
 		successListener: sls,
 	}
@@ -98,12 +99,12 @@ func newSellTrigger(sls chan trigger, transNum int, username string, stockname s
 	return t
 }
 
-func newBuyTrigger(sls chan trigger, transNum int, username string, stockname string, price decimal.Decimal) trigger {
+func newBuyTrigger(sls chan trigger, transNum int, username string, stockname string, amount int) trigger {
 	t := trigger{
 		transNum:        transNum,
 		username:        username,
 		stockname:       stockname,
-		price:           price,
+		amount:          amount,
 		action:          "BUY",
 		successListener: sls,
 	}

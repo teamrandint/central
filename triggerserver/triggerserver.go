@@ -13,12 +13,14 @@ import (
 	"github.com/shopspring/decimal"
 )
 
-// runningTriggers follows [action][stock][user] indexing
-type runningTriggersKey struct {
+// triggersKey follows [action][stock][user] indexing
+type triggersKey struct {
 	action, stock, user string
 }
 
-var runningTriggers = make(map[runningTriggersKey]trigger)
+var waitingTriggers = make(map[triggersKey]trigger)
+var waitingTriggersLock sync.Mutex
+var runningTriggers = make(map[triggersKey]trigger)
 var runningTriggersLock sync.Mutex
 
 var successListener = make(chan trigger)
@@ -26,8 +28,10 @@ var successListener = make(chan trigger)
 func main() {
 	fmt.Println("Launching server...")
 	http.HandleFunc("/setTrigger", setTriggerHandler)
+	http.HandleFunc("/startTrigger", startTriggerHandler)
 	http.HandleFunc("/cancelTrigger", cancelTriggerHandler)
 	http.HandleFunc("/runningTriggers", getRunningTriggersHandler)
+	http.HandleFunc("/waitingTriggers", getWaitingTriggersHandler)
 
 	go startSuccessListener()
 
@@ -37,22 +41,54 @@ func main() {
 	}
 }
 
-func setTriggerHandler(w http.ResponseWriter, r *http.Request) {
+func startTriggerHandler(w http.ResponseWriter, r *http.Request) {
 	action := r.FormValue("action")
-	transnumStr := r.FormValue("transnum")
+	//transnumStr := r.FormValue("transnum")
 	username := r.FormValue("username")
 	stock := r.FormValue("stock")
 	priceStr := r.FormValue("price")
 
-	if !verifyAction(action) {
-		w.WriteHeader(http.StatusBadRequest)
-		panic("Tried to post a bad action (BUY/SELL)")
-	}
+	//transnum, err := strconv.Atoi(transnumStr)
+	//if err != nil {
+	//	w.WriteHeader(http.StatusBadRequest)
+	//	panic(err)
+	//}
 
 	price, err := decimal.NewFromString(priceStr)
 	if err != nil {
 		w.WriteHeader(http.StatusBadRequest)
 		panic(err)
+	}
+
+	// START LOCKING -- BE CAREFUL OF DEADLOCKS HERE
+	waitingTriggersLock.Lock()
+	t := waitingTriggers[triggersKey{action, stock, username}]
+	t.price = price
+
+	runningTriggersLock.Lock()
+
+	delete(waitingTriggers, triggersKey{t.action, t.stockname, t.username})
+	runningTriggers[triggersKey{t.action, t.stockname, t.username}] = t
+
+	go t.StartPolling()
+
+	waitingTriggersLock.Unlock()
+	runningTriggersLock.Unlock()
+	// END LOCKING
+
+	w.WriteHeader(http.StatusOK)
+}
+
+func setTriggerHandler(w http.ResponseWriter, r *http.Request) {
+	action := r.FormValue("action")
+	transnumStr := r.FormValue("transnum")
+	username := r.FormValue("username")
+	stock := r.FormValue("stock")
+	amountStr := r.FormValue("amount")
+
+	if !verifyAction(action) {
+		w.WriteHeader(http.StatusBadRequest)
+		panic("Tried to post a bad action (BUY/SELL)")
 	}
 
 	transnum, err := strconv.Atoi(transnumStr)
@@ -61,18 +97,23 @@ func setTriggerHandler(w http.ResponseWriter, r *http.Request) {
 		panic(err)
 	}
 
+	amount, err := strconv.Atoi(amountStr)
+	if err != nil {
+		w.WriteHeader(http.StatusBadRequest)
+		panic(err)
+	}
+
 	var t trigger
 	if action == "BUY" {
-		t = newBuyTrigger(successListener, transnum, username, stock, price)
+		t = newBuyTrigger(successListener, transnum, username, stock, amount)
 	} else {
-		t = newSellTrigger(successListener, transnum, username, stock, price)
+		t = newSellTrigger(successListener, transnum, username, stock, amount)
 	}
-	fmt.Println("Added: ", t)
-	go t.StartPolling()
 
-	runningTriggersLock.Lock()
-	runningTriggers[runningTriggersKey{t.action, t.stockname, t.username}] = t
-	runningTriggersLock.Unlock()
+	waitingTriggersLock.Lock()
+	waitingTriggers[triggersKey{t.action, t.stockname, t.username}] = t
+	waitingTriggersLock.Unlock()
+	fmt.Println("Added but not started: ", t)
 
 	w.WriteHeader(http.StatusOK)
 }
@@ -148,6 +189,12 @@ func getRunningTriggersHandler(w http.ResponseWriter, r *http.Request) {
 	runningTriggersLock.Unlock()
 }
 
+func getWaitingTriggersHandler(w http.ResponseWriter, r *http.Request) {
+	waitingTriggersLock.Lock()
+	fmt.Fprintln(w, waitingTriggers)
+	waitingTriggersLock.Unlock()
+}
+
 func verifyAction(action string) bool {
 	if action != "BUY" && action != "SELL" {
 		return false
@@ -159,11 +206,11 @@ func verifyAction(action string) bool {
 func cancelTrigger(t trigger) error {
 	runningTriggersLock.Lock()
 	defer runningTriggersLock.Unlock()
-	_, ok := runningTriggers[runningTriggersKey{t.action, t.stockname, t.username}]
+	_, ok := runningTriggers[triggersKey{t.action, t.stockname, t.username}]
 	if !ok {
 		return errors.New("Can't find running trigger")
 	}
-	runningTriggers[runningTriggersKey{t.action, t.stockname, t.username}].Cancel()
-	delete(runningTriggers, runningTriggersKey{t.action, t.stockname, t.username})
+	runningTriggers[triggersKey{t.action, t.stockname, t.username}].Cancel()
+	delete(runningTriggers, triggersKey{t.action, t.stockname, t.username})
 	return nil
 }
