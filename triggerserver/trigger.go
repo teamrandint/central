@@ -2,8 +2,6 @@ package main
 
 import (
 	"fmt"
-	"net"
-	"os"
 	"seng468/triggerserver/quote"
 	"time"
 
@@ -11,12 +9,13 @@ import (
 )
 
 type trigger struct {
-	username  string
-	stockname string
-	price     decimal.Decimal
-	action    string
-	transNum  int
-	done      chan bool
+	username        string
+	stockname       string
+	price           decimal.Decimal
+	action          string
+	transNum        int
+	done            chan bool
+	successListener chan trigger
 }
 
 func (t trigger) getSuccessString() string {
@@ -36,7 +35,8 @@ func (t trigger) String() string {
 func (t trigger) StartPolling() {
 	if t.checkTriggerStatus() {
 		t.Cancel()
-		t.alertTriggerSuccess()
+		successListener <- t
+		return
 	}
 	ticker := time.NewTicker((time.Second * 60) + time.Millisecond)
 	defer ticker.Stop()
@@ -48,30 +48,11 @@ func (t trigger) StartPolling() {
 		case <-ticker.C:
 			if t.checkTriggerStatus() {
 				t.Cancel()
-				t.alertTriggerSuccess()
+				successListener <- t
+				return
 			}
+			ticker = time.NewTicker((time.Second * 60) + time.Millisecond)
 		}
-	}
-}
-
-// Send an alert back to the transaction server when a trigger successfully finishes
-func (t trigger) alertTriggerSuccess() {
-	conn, err := net.DialTimeout("tcp",
-		os.Getenv("transaddr")+":"+os.Getenv("transport"),
-		time.Second*15,
-	)
-	if err != nil {
-		panic(err)
-	}
-
-	_, err = fmt.Fprintf(conn, t.getSuccessString())
-	if err != nil {
-		panic(err)
-	}
-
-	err = conn.Close()
-	if err != nil {
-		panic(err)
 	}
 }
 
@@ -85,7 +66,7 @@ func (t trigger) checkTriggerStatus() bool {
 }
 
 func (t trigger) hitQuoteServer() decimal.Decimal {
-	result, err := quoteclient.Query(t.username, t.stockname, t.transNum) //user string, stock string, transNum int
+	result, err := quoteclient.Query(t.username, t.stockname, t.transNum)
 	if err != nil {
 		panic(err)
 	}
@@ -105,25 +86,27 @@ func (t trigger) checkResult(result decimal.Decimal) bool {
 	panic("Should never reach here...")
 }
 
-func newSellTrigger(transNum int, username string, stockname string, price decimal.Decimal) trigger {
+func newSellTrigger(sls chan trigger, transNum int, username string, stockname string, price decimal.Decimal) trigger {
 	t := trigger{
-		transNum:  transNum,
-		username:  username,
-		stockname: stockname,
-		price:     price,
-		action:    "SELL",
+		transNum:        transNum,
+		username:        username,
+		stockname:       stockname,
+		price:           price,
+		action:          "SELL",
+		successListener: sls,
 	}
 
 	return t
 }
 
-func newBuyTrigger(transNum int, username string, stockname string, price decimal.Decimal) trigger {
+func newBuyTrigger(sls chan trigger, transNum int, username string, stockname string, price decimal.Decimal) trigger {
 	t := trigger{
-		transNum:  transNum,
-		username:  username,
-		stockname: stockname,
-		price:     price,
-		action:    "BUY",
+		transNum:        transNum,
+		username:        username,
+		stockname:       stockname,
+		price:           price,
+		action:          "BUY",
+		successListener: sls,
 	}
 
 	return t

@@ -28,6 +28,7 @@ func SetBuyTrigger(transNum int, trig trigger) error {
 }
 
 // setTrigger adds a new trigger to the triggerserver.
+// Action is either 'BUY' or 'SELL'
 // Once a trigger is added, it automatically runs
 func setTrigger(transNum int, action string, newTrigger trigger) error {
 	values := url.Values{
@@ -46,8 +47,21 @@ func setTrigger(transNum int, action string, newTrigger trigger) error {
 }
 
 // CancelTrigger cancels a running trigger on the triggerserver.
+// Action is either 'BUY' or 'SELL'
 // If the given trigger could not be found, returns an error.
-func CancelTrigger(cancel trigger) error {
+func CancelTrigger(transNum int, action string, cancel trigger) error {
+	values := url.Values{
+		"action":   {action},
+		"transnum": {strconv.Itoa(transNum)},
+		"username": {cancel.username},
+		"stock":    {cancel.stockname},
+		"price":    {cancel.getPriceStr()},
+	}
+	_, err := http.PostForm(triggerURL+cancelEndpoint, values)
+	if err != nil {
+		return err
+	}
+
 	return nil
 }
 
