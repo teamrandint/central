@@ -2,14 +2,14 @@ package main
 
 import (
 	"fmt"
-	"net"
 	"net/http"
 	"os"
 	"strconv"
-	"time"
 
 	"github.com/shopspring/decimal"
 )
+
+var runningTriggers []trigger
 
 func main() {
 	fmt.Println("Launching server...")
@@ -19,27 +19,6 @@ func main() {
 
 	fmt.Printf("Trigger server listening on %s:%s\n", os.Getenv("triggeraddr"), os.Getenv("triggerport"))
 	if err := http.ListenAndServe(":"+os.Getenv("triggerport"), nil); err != nil {
-		panic(err)
-	}
-}
-
-// Send an alert back to the transaction server when a trigger successfully finishes
-func alertTriggerSuccess(finished trigger) {
-	conn, err := net.DialTimeout("tcp",
-		os.Getenv("transaddr")+":"+os.Getenv("transport"),
-		time.Second,
-	)
-	if err != nil {
-		panic(err)
-	}
-
-	_, err = fmt.Fprintf(conn, finished.getSuccessString())
-	if err != nil {
-		panic(err)
-	}
-
-	err = conn.Close()
-	if err != nil {
 		panic(err)
 	}
 }
@@ -74,7 +53,8 @@ func setTriggerHandler(w http.ResponseWriter, r *http.Request) {
 	} else {
 		t = newSellTrigger(transnum, username, stock, price)
 	}
-	fmt.Println(t)
+	fmt.Println("Added: ", t)
+	go t.StartPolling()
 
 	w.WriteHeader(http.StatusOK)
 }
@@ -126,8 +106,4 @@ func findRunningTrigger(transnum int, action string, username string, stock stri
 // Removes the trigger from the poller
 func cancelTrigger(t trigger) error {
 	return nil
-}
-
-func startPollingService() {
-
 }
