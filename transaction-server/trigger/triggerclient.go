@@ -1,9 +1,11 @@
 package triggerclient
 
 import (
+	"io/ioutil"
 	"net/http"
 	"net/url"
 	"os"
+	"regexp"
 	"strconv"
 
 	"github.com/shopspring/decimal"
@@ -48,8 +50,8 @@ func StartNewSellTrigger(transNum int, username string, stock string, price deci
 	return startTrigger(transNum, trig)
 }
 
-// Attempts to cancel an existing sell trigger on the server
-func CancelSellTrigger(transNum int, username string, stock string) error {
+// CancelSellTrigger attempts to cancel an existing sell trigger on the server
+func CancelSellTrigger(transNum int, username string, stock string) (trigger, error) {
 	trig := trigger{
 		transNum:  transNum,
 		username:  username,
@@ -88,7 +90,7 @@ func StartNewBuyTrigger(transNum int, username string, stock string, price decim
 }
 
 // Attempts to cancel an existing Buy trigger on the server
-func CancelBuyTrigger(transNum int, username string, stock string) error {
+func CancelBuyTrigger(transNum int, username string, stock string) (trigger, error) {
 	trig := trigger{
 		transNum:  transNum,
 		username:  username,
@@ -136,19 +138,21 @@ func startTrigger(transNum int, newTrigger trigger) error {
 // CancelTrigger cancels a running trigger on the triggerserver.
 // Action is either 'BUY' or 'SELL'
 // If the given trigger could not be found, returns an error.
-func cancelTrigger(transNum int, cancel trigger) error {
+// Should return the cancelled triggers details
+func cancelTrigger(transNum int, cancel trigger) (trigger, error) {
 	values := url.Values{
 		"action":   {cancel.action},
 		"transnum": {strconv.Itoa(transNum)},
 		"username": {cancel.username},
 		"stock":    {cancel.stockname},
 	}
-	_, err := http.PostForm(triggerURL+cancelEndpoint, values)
+	resp, err := http.PostForm(triggerURL+cancelEndpoint, values)
 	if err != nil {
-		return err
+		return trigger{}, err
 	}
 
-	return nil
+	trig := getTriggerFromResponse(resp)
+	return trig, nil
 }
 
 // ListRunningTriggers returns a list of all running triggers on the TriggerServer
@@ -158,4 +162,37 @@ func ListRunningTriggers() {
 	if err != nil {
 		panic(err)
 	}
+}
+
+func getTriggerFromResponse(resp *http.Response) trigger {
+	bodyBytes, err := ioutil.ReadAll(resp.Body)
+	if err != nil {
+		panic(err)
+	}
+	bodyString := string(bodyBytes)
+	return parseTriggerFromString(bodyString)
+}
+
+// "{%v %v %v %v %v}", t.username, t.stockname, t.getPriceStr(), t.amount, t.action
+func parseTriggerFromString(trigStr string) trigger {
+	re := regexp.MustCompile(`{(\w+) (\w+) (\d+.\d+) (\d+) (\w+)}`)
+	matches := re.FindStringSubmatch(trigStr)
+
+	price, err := decimal.NewFromString(matches[3])
+	if err != nil {
+		panic(err)
+	}
+	amount, err := strconv.Atoi(matches[4])
+	if err != nil {
+		panic(err)
+	}
+
+	trig := trigger{
+		username:  matches[1],
+		stockname: matches[2],
+		price:     price,
+		amount:    amount,
+		action:    matches[5],
+	}
+	return trig
 }
