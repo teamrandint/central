@@ -48,6 +48,17 @@ func StartNewSellTrigger(transNum int, username string, stock string, price deci
 	return startTrigger(transNum, trig)
 }
 
+// Attempts to cancel an existing sell trigger on the server
+func CancelSellTrigger(transNum int, username string, stock string) error {
+	trig := trigger{
+		transNum:  transNum,
+		username:  username,
+		stockname: stock,
+		action:    "SELL",
+	}
+	return cancelTrigger(transNum, trig)
+}
+
 // SetNewBuyTrigger adds a new sell trigger to the triggerserver
 func SetNewBuyTrigger(transNum int, username string, stock string, amount int) error {
 	trig := newBuyTrigger(transNum, username, stock, amount)
@@ -74,6 +85,17 @@ func StartNewBuyTrigger(transNum int, username string, stock string, price decim
 		action:    "BUY",
 	}
 	return startTrigger(transNum, trig)
+}
+
+// Attempts to cancel an existing Buy trigger on the server
+func CancelBuyTrigger(transNum int, username string, stock string) error {
+	trig := trigger{
+		transNum:  transNum,
+		username:  username,
+		stockname: stock,
+		action:    "BUY",
+	}
+	return cancelTrigger(transNum, trig)
 }
 
 // setTrigger adds a new trigger to the triggerserver.
@@ -114,7 +136,7 @@ func startTrigger(transNum int, newTrigger trigger) error {
 // CancelTrigger cancels a running trigger on the triggerserver.
 // Action is either 'BUY' or 'SELL'
 // If the given trigger could not be found, returns an error.
-func CancelTrigger(transNum int, cancel trigger) error {
+func cancelTrigger(transNum int, cancel trigger) error {
 	values := url.Values{
 		"action":   {cancel.action},
 		"transnum": {strconv.Itoa(transNum)},
