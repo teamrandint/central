@@ -50,7 +50,6 @@ func (t trigger) StartPolling() {
 				successListener <- t
 				return
 			}
-			ticker = time.NewTicker((time.Second * 60) + time.Millisecond)
 		}
 	}
 }

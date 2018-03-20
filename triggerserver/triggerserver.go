@@ -19,9 +19,8 @@ type triggersKey struct {
 }
 
 var waitingTriggers = make(map[triggersKey]trigger)
-var waitingTriggersLock sync.Mutex
+var triggersLock sync.Mutex
 var runningTriggers = make(map[triggersKey]trigger)
-var runningTriggersLock sync.Mutex
 
 var successListener = make(chan trigger)
 
@@ -61,22 +60,21 @@ func startTriggerHandler(w http.ResponseWriter, r *http.Request) {
 	}
 
 	// START LOCKING -- BE CAREFUL OF DEADLOCKS HERE
-	waitingTriggersLock.Lock()
-	t := waitingTriggers[triggersKey{action, stock, username}]
-	t.price = price
+	defer fmt.Println("Done starting")
+	triggersLock.Lock()
+	if t, ok := waitingTriggers[triggersKey{action, stock, username}]; ok {
+		t.price = price
+		delete(waitingTriggers, triggersKey{t.action, t.stockname, t.username})
+		runningTriggers[triggersKey{t.action, t.stockname, t.username}] = t
+		triggersLock.Unlock()
 
-	runningTriggersLock.Lock()
-
-	delete(waitingTriggers, triggersKey{t.action, t.stockname, t.username})
-	runningTriggers[triggersKey{t.action, t.stockname, t.username}] = t
-
-	go t.StartPolling()
-
-	waitingTriggersLock.Unlock()
-	runningTriggersLock.Unlock()
-	// END LOCKING
-
-	w.WriteHeader(http.StatusOK)
+		go t.StartPolling()
+		w.WriteHeader(http.StatusOK)
+	} else {
+		triggersLock.Unlock()
+		w.WriteHeader(http.StatusBadRequest)
+		return
+	}
 }
 
 func setTriggerHandler(w http.ResponseWriter, r *http.Request) {
@@ -110,9 +108,9 @@ func setTriggerHandler(w http.ResponseWriter, r *http.Request) {
 		t = newSellTrigger(successListener, transnum, username, stock, amount)
 	}
 
-	waitingTriggersLock.Lock()
+	triggersLock.Lock()
 	waitingTriggers[triggersKey{t.action, t.stockname, t.username}] = t
-	waitingTriggersLock.Unlock()
+	triggersLock.Unlock()
 	fmt.Println("Added but not started: ", t)
 
 	w.WriteHeader(http.StatusOK)
@@ -149,8 +147,12 @@ func startSuccessListener() {
 		select {
 		case trig := <-successListener:
 			fmt.Println("Closing successful trigger: ", trig)
-			go cancelTrigger(trig)
 			go alertTriggerSuccess(trig)
+
+			triggersLock.Lock()
+			delete(runningTriggers, triggersKey{trig.action, trig.stockname, trig.username})
+			triggersLock.Unlock()
+			fmt.Println("Trigger should be closed and alerted?")
 		}
 	}
 }
@@ -178,15 +180,15 @@ func alertTriggerSuccess(t trigger) {
 }
 
 func getRunningTriggersHandler(w http.ResponseWriter, r *http.Request) {
-	runningTriggersLock.Lock()
+	triggersLock.Lock()
 	fmt.Fprintln(w, runningTriggers)
-	runningTriggersLock.Unlock()
+	triggersLock.Unlock()
 }
 
 func getWaitingTriggersHandler(w http.ResponseWriter, r *http.Request) {
-	waitingTriggersLock.Lock()
+	triggersLock.Lock()
 	fmt.Fprintln(w, waitingTriggers)
-	waitingTriggersLock.Unlock()
+	triggersLock.Unlock()
 }
 
 func verifyAction(action string) bool {
@@ -198,14 +200,12 @@ func verifyAction(action string) bool {
 
 // Removes the trigger from the poller, returns the removed key and any errors
 func cancelTrigger(t triggersKey) (trigger, error) {
-	runningTriggersLock.Lock()
-	waitingTriggersLock.Lock()
-	defer runningTriggersLock.Unlock()
-	defer waitingTriggersLock.Unlock()
+	triggersLock.Lock()
+	defer triggersLock.Unlock()
 
 	trigger, running := runningTriggers[t]
 	if running {
-		runningTriggers[t].Cancel()
+		trigger.Cancel()
 		delete(runningTriggers, t)
 		return trigger, nil
 	}
