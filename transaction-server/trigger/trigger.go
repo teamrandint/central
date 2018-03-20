@@ -1,81 +1,48 @@
-package triggers
+package triggerclient
 
 import (
 	"fmt"
-	"seng468/transaction-server/quote"
-	"time"
 
 	"github.com/shopspring/decimal"
 )
 
-type Trigger struct {
-	User          string
-	Stock         string
-	TransNum      int
-	BuySellAmount decimal.Decimal
-	TriggerAmount decimal.Decimal
-	action        func(trig *Trigger)
-	TriggerType   string
-	cancel        chan bool
+type trigger struct {
+	username  string
+	stockname string
+	price     decimal.Decimal
+	action    string
+	transNum  int
 }
 
-func NewBuyTrigger(user string, stock string, buySellAmount decimal.Decimal, action func(*Trigger)) *Trigger {
-	return &Trigger{
-		User:          user,
-		Stock:         stock,
-		BuySellAmount: buySellAmount,
-		action:        action,
-		TriggerType:   "BUY",
-	}
+func (t trigger) getPriceStr() string {
+	return t.price.String()
 }
 
-func NewSellTrigger(user string, stock string, buySellAmount decimal.Decimal, action func(trigger *Trigger)) *Trigger {
-	return &Trigger{
-		User:          user,
-		Stock:         stock,
-		BuySellAmount: buySellAmount,
-		action:        action,
-		TriggerType:   "SELL",
-	}
+func (t trigger) String() string {
+	str := fmt.Sprintf("{%v %v %v %v}", t.username, t.stockname, t.getPriceStr(), t.action)
+	return str
 }
 
-func (trig Trigger) Start(trigger decimal.Decimal, transNum int) {
-	trig.TriggerAmount = trigger
-	trig.TransNum = transNum
-	trig.cancel = make(chan bool)
-	go func() {
-		for {
-			trig.testTrigger()
-			select {
-			case <-time.After(time.Millisecond * 200):
-			case <-trig.cancel:
-				return
-			}
-		}
-	}()
+func newSellTrigger(transNum int, username string, stockname string, price decimal.Decimal) trigger {
+	t := trigger{
+		transNum:  transNum,
+		username:  username,
+		stockname: stockname,
+		price:     price,
+		action:    "SELL",
+	}
+
+	return t
 }
 
-func (trig Trigger) Cancel() {
-	if trig.cancel != nil {
-		trig.cancel <- true
-	}
-}
-
-func (trig Trigger) testTrigger() {
-	quote, err := quoteclient.Query(trig.User, trig.Stock, trig.TransNum)
-	if err != nil {
-		fmt.Println(err.Error())
-		return
+func newBuyTrigger(transNum int, username string, stockname string, price decimal.Decimal) trigger {
+	t := trigger{
+		transNum:  transNum,
+		username:  username,
+		stockname: stockname,
+		price:     price,
+		action:    "BUY",
 	}
 
-	if trig.TriggerType == "BUY" && quote.LessThanOrEqual(trig.TriggerAmount) {
-		trig.action(&trig)
-		trig.cancel <- true
-		return
-	}
-
-	if trig.TriggerType == "SELL" && quote.GreaterThanOrEqual(trig.TriggerAmount) {
-		trig.action(&trig)
-		trig.cancel <- true
-	}
+	return t
 }
