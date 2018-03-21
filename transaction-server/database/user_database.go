@@ -31,6 +31,11 @@ type UserDatabase interface {
 	GetReserveStock(user string, stock string) (int, error)
 	RemoveReserveStock(user string, stock string, amount int) error
 
+	AddSellTrigger(user string, stock string, cost decimal.Decimal) error
+	RemoveSellTrigger(user string, stock string, cost decimal.Decimal) error
+	AddBuyTrigger(user string, stock string, shares int) error
+	RemoveBuyTrigger(user string, stock string) error
+
 	PushBuy(user string, stock string, cost decimal.Decimal, shares int) error
 	PopBuy(user string) (stock string, cost decimal.Decimal, shares int, err error)
 	PushSell(user string, stock string, cost decimal.Decimal, shares int) error

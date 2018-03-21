@@ -33,7 +33,7 @@ func TestGetUserInfo(t *testing.T) {
 	if error != nil {
 		t.Error(error)
 	} else {
-		fmt.Println("%v", r)
+		fmt.Println(r)
 	}
 	db.DeleteKey("AAA:Balance")
 }
