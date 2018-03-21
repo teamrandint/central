@@ -75,17 +75,20 @@ func TestStocks(t *testing.T) {
 	db := RedisDatabase{"tcp", ":6379"}
 	db.AddStock("F", "stockname", decimal.NewFromFloat(22.00))
 
-	amt, _ := db.GetStock("F", "stockname")
+	amt, err := db.GetStock("F", "stockname")
 	if !amt.Equals(decimal.NewFromFloat(22.00)) {
 		t.Error("Wrong value for stocks, should be 22, is ", amt)
 	}
+	if err != nil {
+		t.Error(err)
+	}
 
-	amt, _ = db.GetStock("F", "wrongstockname")
+	amt, err = db.GetStock("F", "wrongstockname")
 	if !amt.Equals(decimal.NewFromFloat(0.0)) {
 		t.Error("Should get no value for stocks")
 	}
 
-	err := db.RemoveStock("F", "stockname", decimal.NewFromFloat(2.0))
+	err = db.RemoveStock("F", "stockname", decimal.NewFromFloat(2.0))
 	if err != nil {
 		t.Error(err)
 	}

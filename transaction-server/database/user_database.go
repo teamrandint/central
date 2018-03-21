@@ -265,11 +265,11 @@ func (u RedisDatabase) stockAction(action string, user string,
 	accountSuffix string, stock string, amount decimal.Decimal) (decimal.Decimal, error) {
 	command := ""
 	if action == "Add" {
-		command = "HINCRBY"
+		command = "HINCRBYFLOAT"
 	} else if action == "Get" {
 		command = "HGET"
 	} else if action == "Remove" {
-		command = "HINCRBY"
+		command = "HINCRBYFLOAT"
 		amount = amount.Neg()
 	} else {
 		return decimal.NewFromFloat(0.0), errors.New("Bad action attempt on stocks")
