@@ -3,7 +3,6 @@ package database
 import (
 	"errors"
 	"fmt"
-	"strconv"
 	"strings"
 
 	"github.com/garyburd/redigo/redis"
@@ -19,27 +18,27 @@ type UserDatabase interface {
 	GetFunds(string) (decimal.Decimal, error)
 	RemoveFunds(string, decimal.Decimal) error
 
-	AddStock(user string, stock string, shares int) error
-	GetStock(user string, stock string) (int, error)
-	RemoveStock(user string, stock string, amount int) error
+	AddStock(user string, stock string, shares decimal.Decimal) error
+	GetStock(user string, stock string) (decimal.Decimal, error)
+	RemoveStock(user string, stock string, amount decimal.Decimal) error
 
 	AddReserveFunds(string, decimal.Decimal) error
 	GetReserveFunds(string) (decimal.Decimal, error)
 	RemoveReserveFunds(string, decimal.Decimal) error
 
-	AddReserveStock(user string, stock string, shares int) error
-	GetReserveStock(user string, stock string) (int, error)
-	RemoveReserveStock(user string, stock string, amount int) error
+	AddReserveStock(user string, stock string, shares decimal.Decimal) error
+	GetReserveStock(user string, stock string) (decimal.Decimal, error)
+	RemoveReserveStock(user string, stock string, amount decimal.Decimal) error
 
-	AddSellTrigger(user string, stock string, shares int) error
-	RemoveSellTrigger(user string, stock string, shares int) error
+	AddSellTrigger(user string, stock string, shares decimal.Decimal) error
+	RemoveSellTrigger(user string, stock string, shares decimal.Decimal) error
 	AddBuyTrigger(user string, stock string, amount decimal.Decimal) error
 	RemoveBuyTrigger(user string, stock string) error
 
-	PushBuy(user string, stock string, cost decimal.Decimal, shares int) error
-	PopBuy(user string) (stock string, cost decimal.Decimal, shares int, err error)
-	PushSell(user string, stock string, cost decimal.Decimal, shares int) error
-	PopSell(user string) (stock string, cost decimal.Decimal, shares int, err error)
+	PushBuy(user string, stock string, cost decimal.Decimal, shares decimal.Decimal) error
+	PopBuy(user string) (stock string, cost decimal.Decimal, shares decimal.Decimal, err error)
+	PushSell(user string, stock string, cost decimal.Decimal, shares decimal.Decimal) error
+	PopSell(user string) (stock string, cost decimal.Decimal, shares decimal.Decimal, err error)
 }
 
 // RedisDatabase holds the address of the redisDB
@@ -79,28 +78,28 @@ func (u RedisDatabase) GetUserInfo(user string) (info string, err error) {
 }
 
 // PushSell adds a record of the users requested sell to their account
-func (u RedisDatabase) PushSell(user string, stock string, cost decimal.Decimal, shares int) error {
+func (u RedisDatabase) PushSell(user string, stock string, cost decimal.Decimal, shares decimal.Decimal) error {
 	return u.pushOrder("Sell", user, stock, cost, shares)
 }
 
 // PopSell removes a users most recent requested sell
-func (u RedisDatabase) PopSell(user string) (stock string, cost decimal.Decimal, shares int, err error) {
+func (u RedisDatabase) PopSell(user string) (stock string, cost decimal.Decimal, shares decimal.Decimal, err error) {
 	return u.popOrder("Sell", user)
 }
 
 // PushBuy adds a record of the users requested buy to their account
-func (u RedisDatabase) PushBuy(user string, stock string, cost decimal.Decimal, shares int) error {
+func (u RedisDatabase) PushBuy(user string, stock string, cost decimal.Decimal, shares decimal.Decimal) error {
 	// Expires in 60s
 	return u.pushOrder("Buy", user, stock, cost, shares)
 }
 
 // PopBuy removes a users most recent requested buy
-func (u RedisDatabase) PopBuy(user string) (stock string, cost decimal.Decimal, shares int, err error) {
+func (u RedisDatabase) PopBuy(user string) (stock string, cost decimal.Decimal, shares decimal.Decimal, err error) {
 	return u.popOrder("Buy", user)
 }
 
 func (u RedisDatabase) pushOrder(transType string, user string,
-	stock string, cost decimal.Decimal, shares int) error {
+	stock string, cost decimal.Decimal, shares decimal.Decimal) error {
 	accountSuffix := ""
 	if transType == "Buy" {
 		accountSuffix = ":BuyOrders"
@@ -118,7 +117,7 @@ func (u RedisDatabase) pushOrder(transType string, user string,
 	return err
 }
 
-func (u RedisDatabase) popOrder(transType string, user string) (stock string, cost decimal.Decimal, shares int, err error) {
+func (u RedisDatabase) popOrder(transType string, user string) (stock string, cost decimal.Decimal, shares decimal.Decimal, err error) {
 	accountSuffix := ""
 	if transType == "Buy" {
 		accountSuffix = ":BuyOrders"
@@ -139,21 +138,21 @@ func (u RedisDatabase) popOrder(transType string, user string) (stock string, co
 // Encodes a buy or sell order into a string, to be pushed onto the pending orders stack
 // Returns a string following the format of:
 //		"stock:cost:shares"
-func (u RedisDatabase) encodeOrder(stock string, cost decimal.Decimal, shares int) string {
-	return stock + ":" + cost.String() + ":" + strconv.Itoa(shares)
+func (u RedisDatabase) encodeOrder(stock string, cost decimal.Decimal, shares decimal.Decimal) string {
+	return stock + ":" + cost.String() + ":" + shares.String()
 }
 
 // Performs the opposite of encodeOrder
-func (u RedisDatabase) decodeOrder(order string) (stock string, cost decimal.Decimal, shares int) {
+func (u RedisDatabase) decodeOrder(order string) (stock string, cost decimal.Decimal, shares decimal.Decimal) {
 	split := strings.Split(order, ":")
 	if len(split) == 3 {
 		stock = split[0]
 		cost, _ = decimal.NewFromString(split[1])
-		shares, _ = strconv.Atoi(split[2])
+		shares, _ = decimal.NewFromString(split[2])
 	} else {
 		stock = ""
 		cost, _ = decimal.NewFromString("0")
-		shares = 0
+		shares, _ = decimal.NewFromString("0")
 	}
 
 	return stock, cost, shares
@@ -226,43 +225,43 @@ func (u RedisDatabase) fundAction(action string, user string,
 }
 
 // GetStock returns the users available balance of said stock
-func (u RedisDatabase) GetStock(user string, stock string) (int, error) {
-	return u.stockAction("Get", user, ":Stocks", stock, 0)
+func (u RedisDatabase) GetStock(user string, stock string) (decimal.Decimal, error) {
+	return u.stockAction("Get", user, ":Stocks", stock, decimal.NewFromFloat(0.0))
 }
 
 // RemoveStock removes int stocks from the users account
 // Send the absolute value of the stock being removed
-func (u RedisDatabase) RemoveStock(user string, stock string, amount int) error {
+func (u RedisDatabase) RemoveStock(user string, stock string, amount decimal.Decimal) error {
 	_, err := u.stockAction("Remove", user, ":Stocks", stock, amount)
 	return err
 }
 
 // AddStock adds shares to the user account
-func (u RedisDatabase) AddStock(user string, stock string, shares int) error {
+func (u RedisDatabase) AddStock(user string, stock string, shares decimal.Decimal) error {
 	_, err := u.stockAction("Add", user, ":Stocks", stock, shares)
 	return err
 }
 
 // AddReserveStock adds n shares of stock to a user's account
-func (u RedisDatabase) AddReserveStock(user string, stock string, amount int) error {
+func (u RedisDatabase) AddReserveStock(user string, stock string, amount decimal.Decimal) error {
 	_, err := u.stockAction("Add", user, ":StocksReserve", stock, amount)
 	return err
 }
 
 // GetReserveStock returns the amount of shares present in a user's reserve account
-func (u RedisDatabase) GetReserveStock(user string, stock string) (int, error) {
-	return u.stockAction("Get", user, ":StocksReserve", stock, 0)
+func (u RedisDatabase) GetReserveStock(user string, stock string) (decimal.Decimal, error) {
+	return u.stockAction("Get", user, ":StocksReserve", stock, decimal.NewFromFloat(0.0))
 }
 
 // RemoveReserveStock removes n shares of stock from a user's reserve account
-func (u RedisDatabase) RemoveReserveStock(user string, stock string, amount int) error {
+func (u RedisDatabase) RemoveReserveStock(user string, stock string, amount decimal.Decimal) error {
 	_, err := u.stockAction("Remove", user, ":StocksReserve", stock, amount)
 	return err
 }
 
 // stockAction handles the generic stock commands
 func (u RedisDatabase) stockAction(action string, user string,
-	accountSuffix string, stock string, amount int) (int, error) {
+	accountSuffix string, stock string, amount decimal.Decimal) (decimal.Decimal, error) {
 	command := ""
 	if action == "Add" {
 		command = "HINCRBY"
@@ -270,19 +269,21 @@ func (u RedisDatabase) stockAction(action string, user string,
 		command = "HGET"
 	} else if action == "Remove" {
 		command = "HINCRBY"
-		amount = -amount
+		amount = amount.Neg()
 	} else {
-		return 0, errors.New("Bad action attempt on stocks")
+		return decimal.NewFromFloat(0.0), errors.New("Bad action attempt on stocks")
 	}
 
 	conn := u.getConn()
-	var r int
+	var rF float64
+	var r decimal.Decimal
 	var err error
 	if action != "Get" {
-		r, err = redis.Int(conn.Do(command, user+accountSuffix, stock, amount))
+		rF, err = redis.Float64(conn.Do(command, user+accountSuffix, stock, amount))
+		r = decimal.NewFromFloat(rF)
 	} else {
-		r, err = redis.Int(conn.Do(command, user+accountSuffix, stock))
-
+		rF, err = redis.Float64(conn.Do(command, user+accountSuffix, stock))
+		r = decimal.NewFromFloat(rF)
 	}
 	conn.Close()
 	return r, err

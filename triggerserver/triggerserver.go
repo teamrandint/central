@@ -69,7 +69,7 @@ func startTriggerHandler(w http.ResponseWriter, r *http.Request) {
 		triggersLock.Unlock()
 
 		go t.StartPolling()
-		w.WriteHeader(http.StatusOK)
+		w.Write([]byte(t.String()))
 	} else {
 		triggersLock.Unlock()
 		w.WriteHeader(http.StatusBadRequest)

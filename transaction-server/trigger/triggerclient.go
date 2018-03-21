@@ -55,12 +55,12 @@ func (tc TriggerClient) SetSellTrigger(transNum int, trig Trigger) error {
 }
 
 // StartSellTrigger adds a new sell trigger to the triggerserver
-func (tc TriggerClient) StartSellTrigger(transNum int, trig Trigger) error {
+func (tc TriggerClient) StartSellTrigger(transNum int, trig Trigger) (Trigger, error) {
 	return tc.startTrigger(transNum, trig)
 }
 
 // StartNewSellTrigger starts an existing sell trigger on the triggerserver
-func (tc TriggerClient) StartNewSellTrigger(transNum int, username string, stock string, price decimal.Decimal) error {
+func (tc TriggerClient) StartNewSellTrigger(transNum int, username string, stock string, price decimal.Decimal) (Trigger, error) {
 	trig := Trigger{
 		transNum:  transNum,
 		username:  username,
@@ -94,12 +94,12 @@ func (tc TriggerClient) SetBuyTrigger(transNum int, trig Trigger) error {
 }
 
 // StartBuyTrigger adds a new buy trigger to the triggerserver
-func (tc TriggerClient) StartBuyTrigger(transNum int, trig Trigger) error {
+func (tc TriggerClient) StartBuyTrigger(transNum int, trig Trigger) (Trigger, error) {
 	return tc.startTrigger(transNum, trig)
 }
 
 // StartNewBuyTrigger starts an existing Buy trigger on the triggerserver
-func (tc TriggerClient) StartNewBuyTrigger(transNum int, username string, stock string, price decimal.Decimal) error {
+func (tc TriggerClient) StartNewBuyTrigger(transNum int, username string, stock string, price decimal.Decimal) (Trigger, error) {
 	trig := Trigger{
 		transNum:  transNum,
 		username:  username,
@@ -140,7 +140,7 @@ func (tc TriggerClient) setTrigger(transNum int, newTrigger Trigger) error {
 }
 
 // startTrigger starts an existing trigger on the triggerserver.
-func (tc TriggerClient) startTrigger(transNum int, newTrigger Trigger) error {
+func (tc TriggerClient) startTrigger(transNum int, newTrigger Trigger) (Trigger, error) {
 	values := url.Values{
 		"action":   {newTrigger.action},
 		"transnum": {strconv.Itoa(transNum)},
@@ -148,12 +148,13 @@ func (tc TriggerClient) startTrigger(transNum int, newTrigger Trigger) error {
 		"stock":    {newTrigger.stockname},
 		"price":    {newTrigger.getPriceStr()},
 	}
-	_, err := http.PostForm(triggerURL+setEndpoint, values)
+	resp, err := http.PostForm(triggerURL+setEndpoint, values) // TODO: verify BadRequest causes error
 	if err != nil {
-		return err
+		return Trigger{}, err
 	}
 
-	return nil
+	trig := tc.getTriggerFromResponse(resp)
+	return trig, nil
 }
 
 // CancelTrigger cancels a running trigger on the triggerserver.
