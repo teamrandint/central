@@ -92,6 +92,7 @@ func newSellTrigger(sls chan trigger, transNum int, username string, stockname s
 		stockname:       stockname,
 		amount:          amount,
 		action:          "SELL",
+		done:            make(chan bool),
 		successListener: sls,
 	}
 
@@ -105,6 +106,7 @@ func newBuyTrigger(sls chan trigger, transNum int, username string, stockname st
 		stockname:       stockname,
 		amount:          amount,
 		action:          "BUY",
+		done:            make(chan bool),
 		successListener: sls,
 	}
 

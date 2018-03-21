@@ -146,13 +146,15 @@ func startSuccessListener() {
 	for {
 		select {
 		case trig := <-successListener:
-			fmt.Println("Closing successful trigger: ", trig)
-			go alertTriggerSuccess(trig)
+			go func(trig trigger) {
+				fmt.Println("Closing successful trigger: ", trig)
+				go alertTriggerSuccess(trig)
 
-			triggersLock.Lock()
-			delete(runningTriggers, triggersKey{trig.action, trig.stockname, trig.username})
-			triggersLock.Unlock()
-			fmt.Println("Trigger should be closed and alerted?")
+				triggersLock.Lock()
+				delete(runningTriggers, triggersKey{trig.action, trig.stockname, trig.username})
+				triggersLock.Unlock()
+				fmt.Println("Trigger should be closed and alerted?")
+			}(trig)
 		}
 	}
 }
@@ -201,12 +203,13 @@ func verifyAction(action string) bool {
 // Removes the trigger from the poller, returns the removed key and any errors
 func cancelTrigger(t triggersKey) (trigger, error) {
 	triggersLock.Lock()
+	fmt.Println("got lock whilst cancelling")
 	defer triggersLock.Unlock()
 
 	trigger, running := runningTriggers[t]
 	if running {
-		trigger.Cancel()
 		delete(runningTriggers, t)
+		trigger.Cancel()
 		return trigger, nil
 	}
 
