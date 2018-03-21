@@ -36,7 +36,6 @@ docker build \
 
 cd ../quoteserver
 docker build \
---add-host quoteserve.seng:172.20.0.1 \
 --build-arg quoteaddr=172.20.0.7 \
 --build-arg quoteport=44459 \
 --build-arg auditaddr=172.20.0.3 \
