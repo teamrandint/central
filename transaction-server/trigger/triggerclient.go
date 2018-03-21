@@ -127,7 +127,7 @@ func (tc TriggerClient) setTrigger(transNum int, newTrigger Trigger) error {
 		"stock":    {newTrigger.stockname},
 		"amount":   {newTrigger.getAmountStr()},
 	}
-	_, err := http.PostForm(tc.TriggerURL+startEndpoint, values)
+	_, err := http.PostForm(tc.TriggerURL+setEndpoint, values)
 	if err != nil {
 		return err
 	}
@@ -144,7 +144,7 @@ func (tc TriggerClient) startTrigger(transNum int, newTrigger Trigger) (Trigger,
 		"stock":    {newTrigger.stockname},
 		"price":    {newTrigger.getPriceStr()},
 	}
-	resp, err := http.PostForm(tc.TriggerURL+setEndpoint, values) // TODO: verify BadRequest causes error
+	resp, err := http.PostForm(tc.TriggerURL+startEndpoint, values) // TODO: verify BadRequest causes error
 	if err != nil {
 		return Trigger{}, err
 	}
@@ -195,6 +195,9 @@ func (tc TriggerClient) getTriggerFromResponse(resp *http.Response) Trigger {
 func (tc TriggerClient) parseTriggerFromString(trigStr string) Trigger {
 	re := regexp.MustCompile(`{(\w+) (\w+) (\d+.\d+) (\d+.\d+) (\w+)}`)
 	matches := re.FindStringSubmatch(trigStr)
+	if len(matches) != 6 {
+		return Trigger{}
+	}
 
 	price, err := decimal.NewFromString(matches[3])
 	if err != nil {

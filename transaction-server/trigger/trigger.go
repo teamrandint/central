@@ -24,7 +24,7 @@ func (t Trigger) getAmountStr() string {
 }
 
 func (t Trigger) String() string {
-	str := fmt.Sprintf("{%v %v %v %v %v}", t.username, t.stockname, t.getPriceStr(), t.amount, t.action)
+	str := fmt.Sprintf("{%v %v %v %v %v}", t.username, t.stockname, t.getPriceStr(), t.getAmountStr(), t.action)
 	return str
 }
 

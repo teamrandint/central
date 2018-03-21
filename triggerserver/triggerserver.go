@@ -95,7 +95,7 @@ func setTriggerHandler(w http.ResponseWriter, r *http.Request) {
 		panic(err)
 	}
 
-	amount, err := strconv.Atoi(amountStr)
+	amount, err := decimal.NewFromString(amountStr)
 	if err != nil {
 		w.WriteHeader(http.StatusBadRequest)
 		panic(err)
