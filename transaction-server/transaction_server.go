@@ -547,15 +547,6 @@ func (ts TransactionServer) DumpLogUser(transNum int, params ...string) string {
 	return "1"
 }
 
-// DumpLog prints out to the specified file the complete set of transactions
-// that have occurred in the system.
-// Can only be executed from the supervisor (root/administrator) account.
-func (ts TransactionServer) DumpLog(transNum int, params ...string) string {
-	filename := params[0]
-	go ts.Logger.DumpLog(filename, nil)
-	return "1"
-}
-
 // DisplaySummary provides a summary to the client of the given user's
 // transaction history and the current status of their accounts as well
 // as any set buy or sell triggers and their parameters.

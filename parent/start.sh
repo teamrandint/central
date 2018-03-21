@@ -28,8 +28,8 @@ docker run -d -p 44459:44459 \
 --ip 172.20.0.7 \
 teamrandint/quoteserver
 
-docker run -p 44458:44458 \
+docker run -d -p 44458:44458 \
 --name trans \
 --net net \
 --ip 172.20.0.6 \
-teamrandint/transactionserver /bin/bash
+teamrandint/transactionserver
