@@ -53,7 +53,7 @@ func main() {
 	server.Route("SET_BUY_TRIGGER,<user>,<stock>,<amount>", ts.SetBuyTrigger)
 	server.Route("SET_SELL_AMOUNT,<user>,<stock>,<amount>", ts.SetSellAmount)
 	server.Route("SET_SELL_TRIGGER,<user>,<stock>,<amount>", ts.SetSellTrigger)
-	server.Route("TRIGGER_SUCCESS,<user>,<stock>,<amount>,<action>", ts.TriggerSuccess)
+	server.Route("TRIGGER_SUCCESS,<user>,<stock>,<price>,<amount>,<action>", ts.TriggerSuccess)
 	server.Route("CANCEL_SET_SELL,<user>,<stock>", ts.CancelSetSell)
 	server.Route("DUMPLOG,<user>,<filename>", ts.DumpLogUser)
 	server.Route("DUMPLOG,<filename>", ts.DumpLog)
@@ -549,15 +549,17 @@ func (ts TransactionServer) CancelSetSell(transNum int, params ...string) string
 
 // TriggerSuccess listens for incoming successfully executed triggers from the
 // triggerserver.
-// Params: TRIGGER_SUCCESS,<user>,<stock>,<amount>,<action>
+// Params: TRIGGER_SUCCESS,<user>,<stock>,<price>,<amount>,<action>
+// t.username, t.stockname, t.price, t.amount, t.action
 // Once a successfully completed trigger is received, complete the transaction
 // from a user's reserve account to their main account.
 func (ts TransactionServer) TriggerSuccess(transNum int, params ...string) string {
 	user := params[0]
 	stock := params[1]
-	amount := params[2]
-	action := params[3]
-	fmt.Println("RECEIVED A SUCCESSFUL TRIGGER: ", user, stock, amount, action)
+	price := params[2]
+	amount := params[3]
+	action := params[4]
+	fmt.Println("RECEIVED A SUCCESSFUL TRIGGER: ", user, stock, price, amount, action)
 	// TODO
 	return "1"
 }

@@ -167,8 +167,8 @@ func alertTriggerSuccess(t trigger) {
 		panic(err)
 	}
 
-	fmt.Println(t.getSuccessString())
-	_, err = fmt.Fprintf(conn, t.getSuccessString())
+	fmt.Println(strconv.Itoa(t.transNum) + ";" + t.getSuccessString())
+	_, err = fmt.Fprintf(conn, strconv.Itoa(t.transNum)+";"+t.getSuccessString())
 	if err != nil {
 		panic(err)
 	}
