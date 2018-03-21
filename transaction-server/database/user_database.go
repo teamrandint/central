@@ -213,9 +213,10 @@ func (u RedisDatabase) fundAction(action string, user string,
 
 	conn := u.getConn()
 	var r float64
+	amount64, _ := amount.Float64()
 	var err error
 	if action != "Get" {
-		r, err = redis.Float64(conn.Do(command, user+accountSuffix, amount))
+		r, err = redis.Float64(conn.Do(command, user+accountSuffix, amount64))
 	} else {
 		r, err = redis.Float64(conn.Do(command, user+accountSuffix))
 
@@ -276,10 +277,11 @@ func (u RedisDatabase) stockAction(action string, user string,
 
 	conn := u.getConn()
 	var rF float64
+	amount64, _ := amount.Float64()
 	var r decimal.Decimal
 	var err error
 	if action != "Get" {
-		rF, err = redis.Float64(conn.Do(command, user+accountSuffix, stock, amount))
+		rF, err = redis.Float64(conn.Do(command, user+accountSuffix, stock, amount64))
 		r = decimal.NewFromFloat(rF)
 	} else {
 		rF, err = redis.Float64(conn.Do(command, user+accountSuffix, stock))
