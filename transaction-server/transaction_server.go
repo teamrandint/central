@@ -3,6 +3,7 @@ package main
 import (
 	"fmt"
 	"os"
+	"time"
 	"seng468/transaction-server/database"
 	"seng468/transaction-server/logger"
 	"seng468/transaction-server/quote"
@@ -31,7 +32,8 @@ func main() {
 	auditAddr := "http://" + os.Getenv("auditaddr") + ":" + os.Getenv("auditport")
 
 	server := socketserver.NewSocketServer(serverAddr)
-	database := database.RedisDatabase{Addr: databaseAddr, Port: databasePort, BatchSize: 10, pollRate: 20, BatchResults: make(chan struct{interface{}, error})}
+	database := database.RedisDatabase{Addr: databaseAddr, Port: databasePort, DbRequests: make(chan *database.Query, 10),
+				BatchSize: 10, PollRate: 20 * time.Millisecond, BatchResults: make(chan database.Response)}
 	logger := logger.AuditLogger{Addr: auditAddr}
 	buyTriggers := new(syncmap.Map)
 	sellTriggers := new(syncmap.Map)
@@ -46,7 +48,6 @@ func main() {
 		SellTriggers: sellTriggers,
 	}
 
-	go database.BatchWorker()
 	server.Route("ADD,<user>,<amount>", ts.Add)
 	server.Route("QUOTE,<user>,<stock>", ts.Quote)
 	server.Route("BUY,<user>,<stock>,<amount>", ts.Buy)
@@ -63,6 +64,7 @@ func main() {
 	server.Route("CANCEL_SET_SELL,<user>,<stock>", ts.CancelSetSell)
 	server.Route("DUMPLOG,<user>,<filename>", ts.DumpLogUser)
 	server.Route("DISPLAY_SUMMARY,<user>", ts.DisplaySummary)
+	go ts.UserDatabase.DbRequestWorker()
 	server.Run()
 }
 

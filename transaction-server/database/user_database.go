@@ -37,16 +37,15 @@ type UserDatabase interface {
 	PushSell(user string, stock string, cost decimal.Decimal, shares int) error
 	PopSell(user string) (stock string, cost decimal.Decimal, shares int, err error)
 
-	BatchWorker()
+	DbRequestWorker()
+	MakeDbRequests([]*Query)
 }
 
 // Typical structure of a redis command
 type Query struct {
 	Command string
 	UserString string
-	ParamOne string
-	ParamTwo string
-	cost decimal.Decimal
+	Params []interface{}
 }
 
 type Response struct {
@@ -58,9 +57,9 @@ type Response struct {
 type RedisDatabase struct {
 	Addr string
 	Port string
-	Batch []*Query
+	DbRequests chan *Query
 	BatchSize int
-	PollRate int
+	PollRate time.Duration
 	BatchResults chan Response
 }
 
@@ -129,9 +128,12 @@ func (u RedisDatabase) pushOrder(transType string, user string,
 	query := new(Query)
 	query.Command = "RPUSH"
 	query.UserString = user+accountSuffix
-	query.ParamOne = u.encodeOrder(stock, cost, shares)
-	u.Batch = append(u.Batch, query)
+	query.Params = append(query.Params, u.encodeOrder(stock, cost, shares))
+
+	u.DbRequests <- query
+
 	resp := <- u.BatchResults
+
 	_, err := redis.Int64(resp.r, resp.err)
 	return err
 }
@@ -148,8 +150,11 @@ func (u RedisDatabase) popOrder(transType string, user string) (stock string, co
 	query := new(Query)
 	query.Command = "RPOP"
 	query.UserString = user+accountSuffix
-	u.Batch = append(u.Batch, query)
+
+	u.DbRequests <- query
+
 	resp := <- u.BatchResults
+
 	recv, err := redis.String(resp.r, resp.err)
 
 	stock, cost, shares = u.decodeOrder(recv)
@@ -236,14 +241,16 @@ func (u RedisDatabase) fundAction(action string, user string,
 	query.Command = command
 	query.UserString = user+accountSuffix
 	if action != "Get" {
-		query.cost = amount
+		query.Params = append(query.Params, amount)
 	}
 
-	u.Batch = append(u.Batch, query)
+	u.DbRequests <- query
+
 	// Now wait until query is executed.
 	var r float64
 	var err error
 	resp := <- u.BatchResults
+
 	r, err = redis.Float64(resp.r, resp.err)
 
 	return decimal.NewFromFloat(r), err
@@ -302,16 +309,17 @@ func (u RedisDatabase) stockAction(action string, user string,
 	query := new(Query)
 	query.Command = command
 	query.UserString = user+accountSuffix
-	query.ParamOne = stock
+	query.Params = append(query.Params, stock)
 	if action != "Get" {
-		query.ParamTwo = string(amount)
+		query.Params = append(query.Params, amount)
 	}
-
-	u.Batch = append(u.Batch, query)
+	
+	u.DbRequests <- query
 
 	var r int
 	var err error
 	resp := <- u.BatchResults
+
 	r, err = redis.Int(resp.r, resp.err)
 
 	return r, err
@@ -325,31 +333,49 @@ func (u RedisDatabase) DeleteKey(key string) {
 	conn.Close()
 }
 
-func (u RedisDatabase) BatchWorker() {
-	prevTime := time.Now()
+func (u RedisDatabase) DbRequestWorker() {
+	reqQue := []*Query{}
 	for {
-		// Batch size has been reached or poll time has passed, 
-		if (len(u.Batch) == u.BatchSize) || (time.Now().Sub(prevTime) == time.Millisecond * time.Duration(u.PollRate)) {
-			conn := u.getConn()
-			for _, query := range u.Batch {
-				conn.Send(query.Command, query.UserString, query.ParamOne, query.ParamTwo)
+		// Block until request received
+		select {
+		case request := <- u.DbRequests:
+			reqQue = append(reqQue, request)
+			if len(reqQue) >= u.BatchSize{
+				u.MakeDbRequests(reqQue)
+				reqQue = nil
+				reqQue = []*Query{}
 			}
-			conn.Flush()
-
-			for i := 0; i < len(u.Batch); i++ {
-
-				r, err := conn.Receive()
-				// Recieve results from queries
-				resp := Response{r, err}
-				// Notify waiting processes of batch execution
-				u.BatchResults <- resp
-			}
-
-			// Clear the batch que
-			u.Batch = nil
-			// Reset the timer
-			prevTime = time.Now()
-			conn.Close()
+		case <- time.After(20 * time.Millisecond):
+			u.MakeDbRequests(reqQue)
+			reqQue = nil
+			reqQue = []*Query{}
 		}
 	}
+}
+
+func (u RedisDatabase) MakeDbRequests(requestQue []*Query) {
+	// Batch size has been reached or poll time has passed, 
+		conn := u.getConn()
+		for _, query := range requestQue {
+			if len(query.Params) == 0 {
+				conn.Send(query.Command, query.UserString)
+			} else if len(query.Params) == 1 {
+				conn.Send(query.Command, query.UserString, query.Params[0])
+			} else if len(query.Params) == 2 {
+				conn.Send(query.Command, query.UserString, query.Params[0], query.Params[1])
+			} else {
+				// This is temp, but should never happen...
+				panic("More params then 3!")
+			}
+		}
+		conn.Flush()
+
+		for i := 0; i < len(requestQue); i++ {
+			r, err := conn.Receive()
+			// Recieve results from queries
+			resp := Response{r, err}
+			// Notify waiting processes of batch execution
+			u.BatchResults <- resp
+		}
+		conn.Close()
 }

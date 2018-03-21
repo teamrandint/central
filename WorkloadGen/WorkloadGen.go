@@ -19,6 +19,7 @@ var transcount uint64
 
 // go run WorkloadGen.go serverAddr:port workloadfile
 func main() {
+	http.DefaultTransport.(*http.Transport).MaxIdleConnsPerHost = 10000
 	if len(os.Args) < 4 {
 		fmt.Printf("Usage: server address, workloadfile, delay(ms)")
 		return
