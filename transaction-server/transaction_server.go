@@ -27,17 +27,20 @@ func main() {
 	databaseAddr := "tcp"
 	databasePort := os.Getenv("dbaddr") + ":" + os.Getenv("dbport")
 	auditAddr := "http://" + os.Getenv("auditaddr") + ":" + os.Getenv("auditport")
+	triggerURL := "http://" + os.Getenv("triggeraddr") + ":" + os.Getenv("triggerport")
 
 	server := socketserver.NewSocketServer(serverAddr)
 	database := database.RedisDatabase{Addr: databaseAddr, Port: databasePort}
 	logger := logger.AuditLogger{Addr: auditAddr}
+	triggerclient := triggerclient.TriggerClient{TriggerURL: triggerURL}
 
 	ts := &TransactionServer{
-		Name:         "transactionserve",
-		Addr:         serverAddr,
-		Server:       server,
-		Logger:       logger,
-		UserDatabase: database,
+		Name:          "transactionserve",
+		Addr:          serverAddr,
+		Server:        server,
+		Logger:        logger,
+		UserDatabase:  database,
+		TriggerClient: triggerclient,
 	}
 
 	server.Route("ADD,<user>,<amount>", ts.Add)

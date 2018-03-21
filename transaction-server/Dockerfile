@@ -29,6 +29,10 @@ ARG quoteaddr
 ENV quoteaddr=$quoteaddr
 ARG quoteport
 ENV quoteport=$quoteport
+ARG triggeraddr
+ENV triggeraddr=$triggeraddr
+ARG triggerport
+ENV triggerport=$triggerport
 
 WORKDIR /app
 COPY --from=build-env /go/src/seng468/transaction-server/transactionserve /app/

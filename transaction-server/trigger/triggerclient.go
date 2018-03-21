@@ -4,16 +4,11 @@ import (
 	"io/ioutil"
 	"net/http"
 	"net/url"
-	"os"
 	"regexp"
 	"strconv"
 
 	"github.com/shopspring/decimal"
 )
-
-var triggeraddr = os.Getenv("triggeraddr")
-var triggerport = os.Getenv("triggerport")
-var triggerURL = "http://" + triggeraddr + ":" + triggerport
 
 const (
 	setEndpoint    = "/setTrigger"
@@ -41,6 +36,7 @@ type TriggerFunctions interface {
 
 // TriggerClient acts as an interface for the trigger server
 type TriggerClient struct {
+	TriggerURL string
 }
 
 // SetNewSellTrigger adds a new sell trigger to the triggerserver
@@ -131,7 +127,7 @@ func (tc TriggerClient) setTrigger(transNum int, newTrigger Trigger) error {
 		"stock":    {newTrigger.stockname},
 		"amount":   {newTrigger.getAmountStr()},
 	}
-	_, err := http.PostForm(triggerURL+startEndpoint, values)
+	_, err := http.PostForm(tc.TriggerURL+startEndpoint, values)
 	if err != nil {
 		return err
 	}
@@ -148,7 +144,7 @@ func (tc TriggerClient) startTrigger(transNum int, newTrigger Trigger) (Trigger,
 		"stock":    {newTrigger.stockname},
 		"price":    {newTrigger.getPriceStr()},
 	}
-	resp, err := http.PostForm(triggerURL+setEndpoint, values) // TODO: verify BadRequest causes error
+	resp, err := http.PostForm(tc.TriggerURL+setEndpoint, values) // TODO: verify BadRequest causes error
 	if err != nil {
 		return Trigger{}, err
 	}
@@ -168,7 +164,7 @@ func (tc TriggerClient) cancelTrigger(transNum int, cancel Trigger) (Trigger, er
 		"username": {cancel.username},
 		"stock":    {cancel.stockname},
 	}
-	resp, err := http.PostForm(triggerURL+cancelEndpoint, values)
+	resp, err := http.PostForm(tc.TriggerURL+cancelEndpoint, values)
 	if err != nil {
 		return Trigger{}, err
 	}
@@ -180,7 +176,7 @@ func (tc TriggerClient) cancelTrigger(transNum int, cancel Trigger) (Trigger, er
 // ListRunningTriggers returns a list of all running triggers on the TriggerServer
 // TODO: something useful if needed
 func (tc TriggerClient) ListRunningTriggers() {
-	_, err := http.Get(triggerURL + listEndpoint)
+	_, err := http.Get(tc.TriggerURL + listEndpoint)
 	if err != nil {
 		panic(err)
 	}
