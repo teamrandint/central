@@ -10,23 +10,19 @@ import (
 	"seng468/transaction-server/trigger"
 
 	"github.com/shopspring/decimal"
-	"golang.org/x/sync/syncmap"
-	"github.com/pkg/profile"
 )
 
 // TransactionServer holds the main components of the module itself
 type TransactionServer struct {
-	Name         string
-	Addr         string
-	Server       socketserver.SocketServer
-	Logger       logger.Logger
-	UserDatabase database.RedisDatabase
-	BuyTriggers  *syncmap.Map
-	SellTriggers *syncmap.Map
+	Name          string
+	Addr          string
+	Server        socketserver.SocketServer
+	Logger        logger.Logger
+	UserDatabase  database.RedisDatabase
+	TriggerClient triggerclient.TriggerClient
 }
 
 func main() {
-	defer profile.Start().Stop()
 	serverAddr := os.Getenv("transaddr") + ":" + os.Getenv("transport")
 	databaseAddr := "tcp"
 	databasePort := os.Getenv("dbaddr") + ":" + os.Getenv("dbport")
@@ -35,8 +31,6 @@ func main() {
 	server := socketserver.NewSocketServer(serverAddr)
 	database := database.RedisDatabase{Addr: databaseAddr, Port: databasePort}
 	logger := logger.AuditLogger{Addr: auditAddr}
-	buyTriggers := new(syncmap.Map)
-	sellTriggers := new(syncmap.Map)
 
 	ts := &TransactionServer{
 		Name:         "transactionserve",
@@ -44,8 +38,6 @@ func main() {
 		Server:       server,
 		Logger:       logger,
 		UserDatabase: database,
-		BuyTriggers:  buyTriggers,
-		SellTriggers: sellTriggers,
 	}
 
 	server.Route("ADD,<user>,<amount>", ts.Add)
@@ -61,6 +53,7 @@ func main() {
 	server.Route("SET_BUY_TRIGGER,<user>,<stock>,<amount>", ts.SetBuyTrigger)
 	server.Route("SET_SELL_AMOUNT,<user>,<stock>,<amount>", ts.SetSellAmount)
 	server.Route("SET_SELL_TRIGGER,<user>,<stock>,<amount>", ts.SetSellTrigger)
+	server.Route("TRIGGER_SUCCESS,<user>,<stock>,<amount>,<action>", ts.TriggerSuccess)
 	server.Route("CANCEL_SET_SELL,<user>,<stock>", ts.CancelSetSell)
 	server.Route("DUMPLOG,<user>,<filename>", ts.DumpLogUser)
 	server.Route("DUMPLOG,<filename>", ts.DumpLog)
@@ -340,13 +333,14 @@ func (ts TransactionServer) SetBuyAmount(transNum int, params ...string) string 
 
 	err = ts.UserDatabase.AddReserveFunds(user, amount)
 	if err != nil {
+		// TODO: add funds back into database
 		go ts.Logger.SystemError(ts.Name, transNum, "SET_BUY_AMOUNT", user, stock, nil, amount,
 			fmt.Sprintf("Error adding funds to reserve:  %s", err.Error()))
 		return "-1"
 	}
 
-	trig := triggers.NewBuyTrigger(user, stock, amount, ts.buyExecute)
-	ts.BuyTriggers.Store(user+","+stock, trig)
+	trig := ts.TriggerClient.SetNewBuyTrigger(transNum, user, stock, amount)
+	// TODO: add trigger to database
 	return "1"
 }
 
@@ -361,20 +355,27 @@ func (ts TransactionServer) CancelSetBuy(transNum int, params ...string) string 
 	user := params[0]
 	stock := params[1]
 
-	trigger := ts.getBuyTrigger(user, stock)
-	if trigger == nil {
-		go ts.Logger.SystemError(ts.Name, transNum, "CANCEL_SET_BUY", user, stock, nil, nil,
-			"No existing buy trigger for this user and stock")
-		return "-1"
-	}
-	trigger.Cancel()
-	err := ts.UserDatabase.RemoveReserveFunds(user, trigger.BuySellAmount)
+	cancelled, err := ts.TriggerClient.CancelBuyTrigger(transNum, user, stock)
 	if err != nil {
-		go ts.Logger.SystemError(ts.Name, transNum, "SET_BUY_AMOUNT", user, stock, nil,
-			trigger.BuySellAmount, fmt.Sprintf("Error removing funds from reserve:  %s", err.Error()))
+		go ts.Logger.SystemError(ts.Name, transNum, "CANCEL_SET_BUY", user, stock, nil,
+			nil, fmt.Sprintf("Error cancelling a trigger:  %s", err.Error()))
 		return "-1"
 	}
-	ts.BuyTriggers.Delete(user+","+stock)
+
+	err = ts.UserDatabase.RemoveReserveFunds(user, cancelled.GetAmount())
+	if err != nil {
+		go ts.Logger.SystemError(ts.Name, transNum, "CANCEL_SET_BUY", user, stock, nil,
+			cancelled.GetCost(), fmt.Sprintf("Error removing funds from reserve: %s", err.Error()))
+		return "-1"
+	}
+
+	err = ts.UserDatabase.AddFunds(user, cancelled.GetAmount())
+	if err != nil {
+		go ts.Logger.SystemError(ts.Name, transNum, "CANCEL_SET_BUY", user, stock, nil,
+			cancelled.GetCost(), fmt.Sprintf("Error adding fund: %s", err.Error()))
+		return "-1"
+	}
+
 	return "1"
 }
 
@@ -534,8 +535,22 @@ func (ts TransactionServer) CancelSetSell(transNum int, params ...string) string
 	}
 
 	trigger.Cancel()
-	ts.SellTriggers.Delete(user+","+stock)
+	ts.SellTriggers.Delete(user + "," + stock)
 	return "1"
+}
+
+// TriggerSuccess listens for incoming successfully executed triggers from the
+// triggerserver.
+// Params: TRIGGER_SUCCESS,<user>,<stock>,<amount>,<action>
+// Once a successfully completed trigger is received, complete the transaction
+// from a user's reserve account to their main account.
+func (ts TransactionServer) TriggerSuccess(transNum int, params ...string) string {
+	user := params[0]
+	stock := params[1]
+	amount := params[2]
+	action := params[3]
+	// TODO
+	return ""
 }
 
 // DumpLogUser Print out the history of the users transactions
@@ -563,27 +578,7 @@ func (ts TransactionServer) DisplaySummary(transNum int, params ...string) strin
 	return "TODO"
 }
 
-// getBuyTrigger returns a pointer to the running buy trigger that corresponds
-// to the given user, stock combo.
-// If there is not a matching running trigger, returns nil
-func (ts TransactionServer) getBuyTrigger(user string, stock string) *triggers.Trigger {
-	if val, ok := ts.BuyTriggers.Load(user+","+stock); ok {
-		return val.(*triggers.Trigger)
-	}
-	return nil
-}
-
-// getSellTrigger returns a pointer to the running sell trigger that corresponds
-// to the given user, stock combo.
-// If there is not a matching running trigger, returns nil
-func (ts TransactionServer) getSellTrigger(user string, stock string) *triggers.Trigger {
-	if val, ok := ts.SellTriggers.Load(user+","+stock); ok {
-		return val.(*triggers.Trigger)
-	}
-	return nil
-}
-
-func (ts TransactionServer) sellExecute(trigger *triggers.Trigger) {
+func (ts TransactionServer) sellExecute() {
 	cost, shares, err := ts.getMaxPurchase(trigger.User, trigger.Stock, trigger.BuySellAmount, nil, trigger.TransNum)
 	if err != nil {
 		fmt.Println(err.Error())
@@ -593,10 +588,10 @@ func (ts TransactionServer) sellExecute(trigger *triggers.Trigger) {
 	reserved, _ := ts.UserDatabase.GetReserveStock(trigger.User, trigger.Stock)
 	ts.UserDatabase.AddFunds(trigger.User, cost)
 	ts.UserDatabase.AddStock(trigger.User, trigger.Stock, reserved-shares)
-	ts.SellTriggers.Delete(trigger.User+","+trigger.Stock)
+	ts.SellTriggers.Delete(trigger.User + "," + trigger.Stock)
 }
 
-func (ts TransactionServer) buyExecute(trigger *triggers.Trigger) {
+func (ts TransactionServer) buyExecute() {
 	cost, shares, err := ts.getMaxPurchase(trigger.User, trigger.Stock, trigger.BuySellAmount, nil, trigger.TransNum)
 	if err != nil {
 		fmt.Println(err.Error())
@@ -605,7 +600,7 @@ func (ts TransactionServer) buyExecute(trigger *triggers.Trigger) {
 	ts.UserDatabase.AddFunds(trigger.User, trigger.BuySellAmount.Sub(cost))
 	ts.UserDatabase.RemoveFunds(trigger.User, trigger.BuySellAmount)
 	ts.UserDatabase.AddStock(trigger.User, trigger.Stock, shares)
-	ts.SellTriggers.Delete(trigger.User+","+trigger.Stock)
+	ts.SellTriggers.Delete(trigger.User + "," + trigger.Stock)
 }
 
 func (ts TransactionServer) getMaxPurchase(user string, stock string, amount decimal.Decimal, stockPrice interface{},
