@@ -15,7 +15,7 @@ type trigger struct {
 	price           decimal.Decimal
 	action          string
 	transNum        int
-	done            chan bool
+	done            bool
 	successListener chan trigger
 }
 
@@ -38,28 +38,28 @@ func (t trigger) String() string {
 }
 
 func (t trigger) StartPolling() {
+	t.done = false
 	if t.checkTriggerStatus() {
 		successListener <- t
 		return
 	}
+
 	ticker := time.NewTicker((time.Second * 60) + time.Millisecond)
 	defer ticker.Stop()
 
-	for {
-		select {
-		case <-t.done:
+	for _ = range ticker.C {
+		if t.done {
 			return
-		case <-ticker.C:
-			if t.checkTriggerStatus() {
-				successListener <- t
-				return
-			}
+		}
+		if t.checkTriggerStatus() {
+			successListener <- t
+			return
 		}
 	}
 }
 
 func (t trigger) Cancel() {
-	t.done <- true
+	t.done = true
 	return
 }
 
@@ -96,7 +96,7 @@ func newSellTrigger(sls chan trigger, transNum int, username string, stockname s
 		stockname:       stockname,
 		amount:          amount,
 		action:          "SELL",
-		done:            make(chan bool),
+		done:            false,
 		successListener: sls,
 	}
 
@@ -110,7 +110,7 @@ func newBuyTrigger(sls chan trigger, transNum int, username string, stockname st
 		stockname:       stockname,
 		amount:          amount,
 		action:          "BUY",
-		done:            make(chan bool),
+		done:            false,
 		successListener: sls,
 	}
 

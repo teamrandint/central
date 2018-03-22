@@ -62,7 +62,9 @@ func startTriggerHandler(w http.ResponseWriter, r *http.Request) {
 	// START LOCKING -- BE CAREFUL OF DEADLOCKS HERE
 	defer fmt.Println("Done starting")
 	triggersLock.Lock()
-	if t, ok := waitingTriggers[triggersKey{action, stock, username}]; ok {
+	t, ok := waitingTriggers[triggersKey{action, stock, username}]
+
+	if ok {
 		t.price = price
 		delete(waitingTriggers, triggersKey{t.action, t.stockname, t.username})
 		runningTriggers[triggersKey{t.action, t.stockname, t.username}] = t
@@ -73,7 +75,6 @@ func startTriggerHandler(w http.ResponseWriter, r *http.Request) {
 	} else {
 		triggersLock.Unlock()
 		w.WriteHeader(http.StatusBadRequest)
-		return
 	}
 }
 
@@ -142,16 +143,21 @@ func startSuccessListener() {
 	for {
 		select {
 		case trig := <-successListener:
-			go alertTriggerSuccess(trig)
-
-			triggersLock.Lock()
-			fmt.Println("Closing successful trigger: ", trig)
-			delete(runningTriggers, triggersKey{trig.action, trig.stockname, trig.username})
-			triggersLock.Unlock()
-			fmt.Println("Trigger should be closed and alerted?")
-
+			go handleTriggerSuccess(trig)
 		}
 	}
+}
+
+func handleTriggerSuccess(trig trigger) {
+	go alertTriggerSuccess(trig)
+	fmt.Println("Closing successful trigger: ", trig)
+
+	triggersLock.Lock()
+	delete(runningTriggers, triggersKey{trig.action, trig.stockname, trig.username})
+	triggersLock.Unlock()
+
+	fmt.Println("Trigger should be closed: ", trig)
+
 }
 
 // Send an alert back to the transaction server when a trigger successfully finishes
@@ -200,7 +206,7 @@ func cancelTrigger(t triggersKey) (trigger, error) {
 	trigger, running := runningTriggers[t]
 	if running {
 		delete(runningTriggers, t)
-		trigger.Cancel()
+		//trigger.Cancel()
 		return trigger, nil
 	}
 
