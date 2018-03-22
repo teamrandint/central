@@ -28,6 +28,7 @@ func Query(user string, stock string, transNum int) (decimal.Decimal, error) {
 
 	client := http.Client{}
 	resp, err := client.Do(req)
+	defer resp.Body.Close()
 	if err != nil {
 		fmt.Printf("Error connecting to the quote server: %s", err.Error())
 		return decimal.Decimal{}, err

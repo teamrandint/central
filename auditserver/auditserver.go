@@ -14,7 +14,7 @@ import (
 func userCommandHandler(w http.ResponseWriter, r *http.Request) {
 	timestamp := makeTimestamp()
 	query := r.URL.Query()
-	fmt.Printf("Received userCommand at %v\n", timestamp)
+	// fmt.Printf("Received userCommand at %v\n", timestamp)
 
 	v := &commands.UserCommand{
 		Timestamp:      timestamp,
@@ -35,7 +35,7 @@ func userCommandHandler(w http.ResponseWriter, r *http.Request) {
 func quoteServerHandler(w http.ResponseWriter, r *http.Request) {
 	timestamp := makeTimestamp()
 	query := r.URL.Query()
-	fmt.Printf("Received quoteServer at %v\n", timestamp)
+	// fmt.Printf("Received quoteServer at %v\n", timestamp)
 
 	v := &commands.QuoteServer{
 		Timestamp:       timestamp,
@@ -56,7 +56,7 @@ func quoteServerHandler(w http.ResponseWriter, r *http.Request) {
 func accountTransactionHandler(w http.ResponseWriter, r *http.Request) {
 	timestamp := makeTimestamp()
 	query := r.URL.Query()
-	fmt.Printf("Received accountTransaction at %v\n", timestamp)
+	// fmt.Printf("Received accountTransaction at %v\n", timestamp)
 
 	v := &commands.AccountTransaction{
 		Timestamp:      timestamp,
@@ -75,7 +75,7 @@ func accountTransactionHandler(w http.ResponseWriter, r *http.Request) {
 func systemEventHandler(w http.ResponseWriter, r *http.Request) {
 	timestamp := makeTimestamp()
 	query := r.URL.Query()
-	fmt.Printf("Received systemEvent at %v\n", timestamp)
+	// fmt.Printf("Received systemEvent at %v\n", timestamp)
 
 	v := &commands.SystemEvent{
 		Timestamp:      timestamp,
@@ -96,7 +96,7 @@ func systemEventHandler(w http.ResponseWriter, r *http.Request) {
 func errorEventHandler(w http.ResponseWriter, r *http.Request) {
 	timestamp := makeTimestamp()
 	query := r.URL.Query()
-	fmt.Printf("Received errorEvent at %v\n", timestamp)
+	// fmt.Printf("Received errorEvent at %v\n", timestamp)
 
 	v := &commands.ErrorEvent{
 		Timestamp:      timestamp,
