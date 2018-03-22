@@ -170,7 +170,7 @@ func countTPS() {
 		tpsEnd = transcount
 
 		h, m, s := t.Clock()
-		fmt.Printf("%d:%d:%d\t%d TPS\t%d total\n", h, m, s, tpsEnd-tpsStart, tpsEnd)
+		fmt.Printf("%d:%d:%d\t%d TPS\t\t%d total\n", h, m, s, tpsEnd-tpsStart, tpsEnd)
 	}
 }
 
