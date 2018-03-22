@@ -22,7 +22,7 @@ var waitingTriggers = make(map[triggersKey]trigger)
 var triggersLock sync.Mutex
 var runningTriggers = make(map[triggersKey]trigger)
 
-var successListener = make(chan trigger)
+var successListener = make(chan trigger, 2048)
 
 func main() {
 	fmt.Println("Launching server...")
@@ -127,16 +127,12 @@ func cancelTriggerHandler(w http.ResponseWriter, r *http.Request) {
 		panic("Tried to post a bad action (BUY/SELL)")
 	}
 
-	//transnum, err := strconv.Atoi(transnumStr)
-	//if err != nil {
-	//	w.WriteHeader(http.StatusBadRequest)
-	//	panic(err)
-	//}
-
+	triggersLock.Lock()
 	cancelledTrigger, err := cancelTrigger(triggersKey{action, stock, username})
+	triggersLock.Unlock()
 	if err != nil {
 		w.WriteHeader(http.StatusBadRequest)
-		panic(err)
+		return
 	}
 	fmt.Println("CANCELLED: ", cancelledTrigger)
 	w.Write([]byte(cancelledTrigger.String()))
@@ -146,15 +142,14 @@ func startSuccessListener() {
 	for {
 		select {
 		case trig := <-successListener:
-			go func(trig trigger) {
-				fmt.Println("Closing successful trigger: ", trig)
-				go alertTriggerSuccess(trig)
+			go alertTriggerSuccess(trig)
 
-				triggersLock.Lock()
-				delete(runningTriggers, triggersKey{trig.action, trig.stockname, trig.username})
-				triggersLock.Unlock()
-				fmt.Println("Trigger should be closed and alerted?")
-			}(trig)
+			triggersLock.Lock()
+			fmt.Println("Closing successful trigger: ", trig)
+			delete(runningTriggers, triggersKey{trig.action, trig.stockname, trig.username})
+			triggersLock.Unlock()
+			fmt.Println("Trigger should be closed and alerted?")
+
 		}
 	}
 }
@@ -202,10 +197,6 @@ func verifyAction(action string) bool {
 
 // Removes the trigger from the poller, returns the removed key and any errors
 func cancelTrigger(t triggersKey) (trigger, error) {
-	triggersLock.Lock()
-	fmt.Println("got lock whilst cancelling")
-	defer triggersLock.Unlock()
-
 	trigger, running := runningTriggers[t]
 	if running {
 		delete(runningTriggers, t)
