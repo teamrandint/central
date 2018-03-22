@@ -4,6 +4,7 @@ import (
 	"bufio"
 	"fmt"
 	"io/ioutil"
+	"net"
 	"net/http"
 	"net/url"
 	"os"
@@ -45,9 +46,11 @@ func runRequests(serverAddr string, users map[string][]string, delay int) {
 
 		wg.Add(1)
 		go func(commands []string) {
-			//timeout := time.Duration(15 * time.Second)
+			transport := http.Transport{
+				Dial: dialTimeout,
+			}
 			client := http.Client{
-			//	Timeout: timeout,
+				Transport: &transport,
 			}
 
 			// Issue login before executing any commands
@@ -157,13 +160,21 @@ func parseCommand(cmd string) (endpoint string, v url.Values) {
 func countTPS() {
 	var tpsStart uint64
 	var tpsEnd uint64
-	elapsedtime := 0
-	for {
-		tpsStart = transcount
-		time.Sleep(time.Second)
+	ticker := time.NewTicker(time.Second)
+	defer ticker.Stop()
+
+	tpsStart = 0
+	tpsEnd = 0
+	for t := range ticker.C {
+		tpsStart = tpsEnd
 		tpsEnd = transcount
 
-		fmt.Printf("%d Running at %d TPS\n", elapsedtime, tpsEnd-tpsStart)
-		elapsedtime++
+		h, m, s := t.Clock()
+		fmt.Printf("%d:%d:%d\t%d TPS\t%d total\n", h, m, s, tpsEnd-tpsStart, tpsEnd)
 	}
+}
+
+func dialTimeout(network, addr string) (net.Conn, error) {
+	var timeout = time.Duration(15 * time.Second)
+	return net.DialTimeout(network, addr, timeout)
 }
