@@ -3,10 +3,10 @@ package main
 import (
 	"bufio"
 	"fmt"
+	"io/ioutil"
 	"net/http"
 	"net/url"
 	"os"
-	"io/ioutil"
 	"regexp"
 	"strconv"
 	"strings"
@@ -45,8 +45,13 @@ func runRequests(serverAddr string, users map[string][]string, delay int) {
 
 		wg.Add(1)
 		go func(commands []string) {
+			//timeout := time.Duration(15 * time.Second)
+			client := http.Client{
+			//	Timeout: timeout,
+			}
+
 			// Issue login before executing any commands
-			resp, err := http.PostForm("http://"+serverAddr+"/"+"LOGIN"+"/", url.Values{"username": {userName}})
+			resp, err := client.PostForm("http://"+serverAddr+"/"+"LOGIN"+"/", url.Values{"username": {userName}})
 			if err != nil {
 				fmt.Println(err)
 			}
@@ -56,7 +61,7 @@ func runRequests(serverAddr string, users map[string][]string, delay int) {
 				endpoint, values := parseCommand(command)
 				time.Sleep(time.Duration(delay) * time.Millisecond) // ADJUST THIS TO CHANGE DELAY
 				// fmt.Println("http://"+serverAddr+"/"+endpoint+"/", values)
-				resp, err := http.PostForm("http://"+serverAddr+"/"+endpoint+"/", values)
+				resp, err := client.PostForm("http://"+serverAddr+"/"+endpoint+"/", values)
 				if err != nil {
 					fmt.Println(err)
 				}
