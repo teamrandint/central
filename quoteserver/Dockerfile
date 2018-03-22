@@ -17,7 +17,7 @@ ENV quoteport=$quoteport
 ARG auditaddr
 ENV auditaddr=$auditaddr
 ARG auditport
-ENV auditport=$
+ENV auditport=$auditport
 
 ARG legacyquoteaddr
 ENV legacyquoteaddr=$legacyquoteaddr

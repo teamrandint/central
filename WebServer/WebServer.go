@@ -253,6 +253,7 @@ func (webServer *WebServer) commitSellHandler(writer http.ResponseWriter, reques
 		webServer.logger.SystemError(webServer.Name, currTransNum, "COMMIT_SELL",
 			username, nil, nil, nil, "Time elapsed on most recent sell")
 		http.Error(writer, "Time elapsed on most recent sell", 400)
+		return
 		//fmt.Printf("Time has elapsed on last sell for user %s\n", username)
 	} else {
 		resp = webServer.transmitter.MakeRequest(currTransNum, "COMMIT_SELL,"+username)
