@@ -136,6 +136,11 @@ func dumpLogHandler(w http.ResponseWriter, r *http.Request) {
 	file.Close()
 }
 
+func dumpLogRetrieveHandler(w http.ResponseWriter, r *http.Request) {
+	filename := r.FormValue("filename")
+	http.ServeFile(w, r, filename)
+}
+
 func makeTimestamp() int64 {
 	return time.Now().UnixNano() / (int64(time.Millisecond) / int64(time.Nanosecond))
 }
@@ -150,6 +155,7 @@ func main() {
 	http.HandleFunc("/systemEvent", systemEventHandler)
 	http.HandleFunc("/errorEvent", errorEventHandler)
 	http.HandleFunc("/dumpLog", dumpLogHandler)
+	http.HandleFunc("/dumpLogRetrieve", dumpLogRetrieveHandler)
 
 	fmt.Printf("Audit server listening on %s:%s\n", os.Getenv("auditaddr"), os.Getenv("auditport"))
 	if err := http.ListenAndServe(":"+os.Getenv("auditport"), nil); err != nil {

@@ -30,7 +30,8 @@ func main() {
 	triggerURL := "http://" + os.Getenv("triggeraddr") + ":" + os.Getenv("triggerport")
 
 	server := socketserver.NewSocketServer(serverAddr)
-	database := database.RedisDatabase{Addr: databaseAddr, Port: databasePort}
+	database := database.RedisDatabase{Addr: databaseAddr, Port: databasePort, DbRequests: make(chan *database.Query, 10),
+		BatchSize: 10, PollRate: 20, BatchResults: make(chan database.Response)}
 	logger := logger.AuditLogger{Addr: auditAddr}
 	triggerclient := triggerclient.TriggerClient{TriggerURL: triggerURL}
 
@@ -59,8 +60,8 @@ func main() {
 	server.Route("TRIGGER_SUCCESS,<user>,<stock>,<price>,<amount>,<action>", ts.TriggerSuccess)
 	server.Route("CANCEL_SET_SELL,<user>,<stock>", ts.CancelSetSell)
 	server.Route("DUMPLOG,<user>,<filename>", ts.DumpLogUser)
-	server.Route("DUMPLOG,<filename>", ts.DumpLog)
 	server.Route("DISPLAY_SUMMARY,<user>", ts.DisplaySummary)
+	go ts.UserDatabase.DbRequestWorker()
 	server.Run()
 }
 
@@ -573,15 +574,6 @@ func (ts TransactionServer) DumpLogUser(transNum int, params ...string) string {
 	user := params[0]
 	filename := params[1]
 	go ts.Logger.DumpLog(filename, user)
-	return "1"
-}
-
-// DumpLog prints out to the specified file the complete set of transactions
-// that have occurred in the system.
-// Can only be executed from the supervisor (root/administrator) account.
-func (ts TransactionServer) DumpLog(transNum int, params ...string) string {
-	filename := params[0]
-	go ts.Logger.DumpLog(filename, nil)
 	return "1"
 }
 

@@ -416,25 +416,18 @@ func (webServer *WebServer) dumplogHandler(writer http.ResponseWriter, request *
 	currTransNum := int(atomic.AddInt64(&webServer.transactionNumber, 1))
 	username := request.FormValue("username")
 	filename := request.FormValue("filename")
-	message := ""
 
 	if len(username) == 0 {
-		message = "DUMPLOG," + filename
 		webServer.logger.UserCommand(webServer.Name, currTransNum, "DUMPLOG",
 			nil, nil, filename, nil)
 	} else {
-		message = "DUMPLOG," + username + "," + filename
 		webServer.logger.UserCommand(webServer.Name, currTransNum, "DUMPLOG",
 			username, nil, filename, nil)
 	}
 
-	resp := webServer.transmitter.MakeRequest(currTransNum, message)
-	if resp == "-1" {
-		webServer.logger.SystemError(webServer.Name, currTransNum, "DUMPLOG",
-			username, nil, nil, nil, "Bad response from transactionserv")
-		http.Error(writer, "Invalid Request", 400)
-		return
-	}
+	webServer.logger.DumpLog(filename, nil)
+	file := webServer.transmitter.RetrieveDumplog(filename)
+	writer.Write(file)
 }
 
 func (webServer *WebServer) displaySummaryHandler(writer http.ResponseWriter, request *http.Request, title string) {

@@ -4,6 +4,7 @@ import (
 	"errors"
 	"fmt"
 	"strings"
+	"time"
 
 	"github.com/garyburd/redigo/redis"
 
@@ -39,12 +40,32 @@ type UserDatabase interface {
 	PopBuy(user string) (stock string, cost decimal.Decimal, shares decimal.Decimal, err error)
 	PushSell(user string, stock string, cost decimal.Decimal, shares decimal.Decimal) error
 	PopSell(user string) (stock string, cost decimal.Decimal, shares decimal.Decimal, err error)
+
+	DbRequestWorker()
+	MakeDbRequests([]*Query)
+}
+
+// Typical structure of a redis command
+type Query struct {
+	Command    string
+	UserString string
+	Params     []interface{}
+}
+
+// Represents a response from a redis database
+type Response struct {
+	r   interface{}
+	err error
 }
 
 // RedisDatabase holds the address of the redisDB
 type RedisDatabase struct {
-	Addr string
-	Port string
+	Addr         string
+	Port         string
+	DbRequests   chan *Query
+	BatchSize    int
+	PollRate     time.Duration
+	BatchResults chan Response
 }
 
 func (u RedisDatabase) getConn() redis.Conn {
@@ -109,11 +130,16 @@ func (u RedisDatabase) pushOrder(transType string, user string,
 		return errors.New("Bad transaction type of " + transType)
 	}
 
-	encoded := u.encodeOrder(stock, cost, shares)
+	query := new(Query)
+	query.Command = "RPUSH"
+	query.UserString = user + accountSuffix
+	query.Params = append(query.Params, u.encodeOrder(stock, cost, shares))
 
-	conn := u.getConn()
-	_, err := redis.Int64(conn.Do("RPUSH", user+accountSuffix, encoded))
-	conn.Close()
+	u.DbRequests <- query
+
+	resp := <-u.BatchResults
+
+	_, err := redis.Int64(resp.r, resp.err)
 	return err
 }
 
@@ -126,10 +152,15 @@ func (u RedisDatabase) popOrder(transType string, user string) (stock string, co
 	} else {
 		return stock, cost, shares, errors.New("Bad transaction type of " + transType)
 	}
+	query := new(Query)
+	query.Command = "RPOP"
+	query.UserString = user + accountSuffix
 
-	conn := u.getConn()
-	recv, err := redis.String(conn.Do("RPOP", user+accountSuffix))
-	conn.Close()
+	u.DbRequests <- query
+
+	resp := <-u.BatchResults
+
+	recv, err := redis.String(resp.r, resp.err)
 
 	stock, cost, shares = u.decodeOrder(recv)
 	return stock, cost, shares, err
@@ -211,17 +242,18 @@ func (u RedisDatabase) fundAction(action string, user string,
 		return decimal.NewFromFloat(0.0), errors.New("Bad action attempt on funds")
 	}
 
-	conn := u.getConn()
-	var r float64
-	amount64, _ := amount.Float64()
-	var err error
+	query := new(Query)
+	query.Command = command
+	query.UserString = user + accountSuffix
 	if action != "Get" {
-		r, err = redis.Float64(conn.Do(command, user+accountSuffix, amount64))
-	} else {
-		r, err = redis.Float64(conn.Do(command, user+accountSuffix))
-
+		query.Params = append(query.Params, amount)
 	}
-	conn.Close()
+
+	u.DbRequests <- query
+	resp := <-u.BatchResults
+
+	r, err := redis.Float64(resp.r, resp.err)
+
 	return decimal.NewFromFloat(r), err
 }
 
@@ -275,20 +307,27 @@ func (u RedisDatabase) stockAction(action string, user string,
 		return decimal.NewFromFloat(0.0), errors.New("Bad action attempt on stocks")
 	}
 
-	conn := u.getConn()
-	var rF float64
-	amount64, _ := amount.Float64()
-	var r decimal.Decimal
-	var err error
+	query := new(Query)
+	query.Command = command
+	query.UserString = user + accountSuffix
+	query.Params = append(query.Params, stock)
 	if action != "Get" {
-		rF, err = redis.Float64(conn.Do(command, user+accountSuffix, stock, amount64))
-		r = decimal.NewFromFloat(rF)
-	} else {
-		rF, err = redis.Float64(conn.Do(command, user+accountSuffix, stock))
-		r = decimal.NewFromFloat(rF)
+		query.Params = append(query.Params, amount)
 	}
-	conn.Close()
-	return r, err
+
+	u.DbRequests <- query
+
+	var r float64
+	var err error
+	resp := <-u.BatchResults
+
+	r, err = redis.Float64(resp.r, resp.err)
+	if err != nil {
+		return decimal.Decimal{}, err
+	}
+
+	rDec := decimal.NewFromFloat(r)
+	return rDec, nil
 }
 
 // DeleteKey deletes a key in the database
@@ -296,5 +335,52 @@ func (u RedisDatabase) stockAction(action string, user string,
 func (u RedisDatabase) DeleteKey(key string) {
 	conn := u.getConn()
 	conn.Do("DEL", key)
+	conn.Close()
+}
+
+func (u RedisDatabase) DbRequestWorker() {
+	reqQue := []*Query{}
+	for {
+		// Block until request received
+		select {
+		case request := <-u.DbRequests:
+			reqQue = append(reqQue, request)
+			if len(reqQue) >= u.BatchSize {
+				u.MakeDbRequests(reqQue)
+				reqQue = nil
+				reqQue = []*Query{}
+			}
+		case <-time.After(u.PollRate * time.Millisecond):
+			u.MakeDbRequests(reqQue)
+			reqQue = nil
+			reqQue = []*Query{}
+		}
+	}
+}
+
+func (u RedisDatabase) MakeDbRequests(requestQue []*Query) {
+	// Batch size has been reached or poll time has passed,
+	conn := u.getConn()
+	for _, query := range requestQue {
+		if len(query.Params) == 0 {
+			conn.Send(query.Command, query.UserString)
+		} else if len(query.Params) == 1 {
+			conn.Send(query.Command, query.UserString, query.Params[0])
+		} else if len(query.Params) == 2 {
+			conn.Send(query.Command, query.UserString, query.Params[0], query.Params[1])
+		} else {
+			// Should never happen...
+			panic("More params then 3!")
+		}
+	}
+	conn.Flush()
+
+	for i := 0; i < len(requestQue); i++ {
+		r, err := conn.Receive()
+		// Recieve results from queries
+		resp := Response{r, err}
+		// Notify waiting processes of batch execution
+		u.BatchResults <- resp
+	}
 	conn.Close()
 }

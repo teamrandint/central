@@ -3,8 +3,12 @@ package transmitter
 import (
 	"bufio"
 	"fmt"
+	"io/ioutil"
 	"log"
 	"net"
+	"net/http"
+	"net/url"
+	"os"
 	"strconv"
 	"time"
 )
@@ -48,14 +52,31 @@ func (trans *Transmitter) MakeRequest(transNum int, message string) string {
 		// Error in connection
 		log.Print(err)
 		return "-1"
-	} else {
-		trans.connection = conn
 	}
+
+	trans.connection = conn
 
 	// fmt.Println("Making request to transaction server")
 	fmt.Fprintf(trans.connection, message)
 	// fmt.Println("Waiting for response from transaction server")
 	reply, _ := bufio.NewReader(trans.connection).ReadString('\n')
-	// trans.connection.Close()
+	trans.connection.Close()
 	return reply
+}
+
+func (trans *Transmitter) RetrieveDumplog(filename string) []byte {
+	auditAddr := "http://" + os.Getenv("auditaddr") + ":" + os.Getenv("auditport")
+	resp, err := http.PostForm(auditAddr+"/dumpLogRetrieve", url.Values{"filename": {filename}})
+	if err != nil {
+		log.Print(err)
+	}
+
+	defer resp.Body.Close()
+
+	body, err := ioutil.ReadAll(resp.Body)
+	if err != nil {
+		fmt.Println(err)
+	}
+
+	return body
 }
