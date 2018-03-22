@@ -11,7 +11,6 @@ import (
 
 	"github.com/shopspring/decimal"
 	"golang.org/x/sync/syncmap"
-	"github.com/pkg/profile"
 )
 
 // TransactionServer holds the main components of the module itself
@@ -26,14 +25,14 @@ type TransactionServer struct {
 }
 
 func main() {
-	defer profile.Start().Stop()
 	serverAddr := os.Getenv("transaddr") + ":" + os.Getenv("transport")
 	databaseAddr := "tcp"
 	databasePort := os.Getenv("dbaddr") + ":" + os.Getenv("dbport")
 	auditAddr := "http://" + os.Getenv("auditaddr") + ":" + os.Getenv("auditport")
 
 	server := socketserver.NewSocketServer(serverAddr)
-	database := database.RedisDatabase{Addr: databaseAddr, Port: databasePort}
+	database := database.RedisDatabase{Addr: databaseAddr, Port: databasePort, DbRequests: make(chan *database.Query, 10),
+				BatchSize: 10, PollRate: 20, BatchResults: make(chan database.Response)}
 	logger := logger.AuditLogger{Addr: auditAddr}
 	buyTriggers := new(syncmap.Map)
 	sellTriggers := new(syncmap.Map)
@@ -63,8 +62,8 @@ func main() {
 	server.Route("SET_SELL_TRIGGER,<user>,<stock>,<amount>", ts.SetSellTrigger)
 	server.Route("CANCEL_SET_SELL,<user>,<stock>", ts.CancelSetSell)
 	server.Route("DUMPLOG,<user>,<filename>", ts.DumpLogUser)
-	server.Route("DUMPLOG,<filename>", ts.DumpLog)
 	server.Route("DISPLAY_SUMMARY,<user>", ts.DisplaySummary)
+	go ts.UserDatabase.DbRequestWorker()
 	server.Run()
 }
 
