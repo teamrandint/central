@@ -66,6 +66,7 @@ type RedisDatabase struct {
 	BatchSize    int
 	PollRate     time.Duration
 	BatchResults chan Response
+	DbPool       *redis.Pool
 }
 
 func (u RedisDatabase) getConn() redis.Conn {
@@ -74,6 +75,15 @@ func (u RedisDatabase) getConn() redis.Conn {
 		panic(err)
 	}
 	return c
+}
+
+func NewPool(addr string, port string) *redis.Pool {
+	return &redis.Pool{
+		MaxIdle:     5,
+		MaxActive:   0,
+		IdleTimeout: 120 * time.Second,
+		Dial:        func() (redis.Conn, error) { return redis.Dial(addr, port) },
+	}
 }
 
 // GetUserInfo returns all of a users information in the database
@@ -360,7 +370,8 @@ func (u RedisDatabase) DbRequestWorker() {
 
 func (u RedisDatabase) MakeDbRequests(requestQue []*Query) {
 	// Batch size has been reached or poll time has passed,
-	conn := u.getConn()
+	conn := u.DbPool.Get()
+	defer conn.Close()
 	for _, query := range requestQue {
 		if len(query.Params) == 0 {
 			conn.Send(query.Command, query.UserString)
@@ -382,5 +393,4 @@ func (u RedisDatabase) MakeDbRequests(requestQue []*Query) {
 		// Notify waiting processes of batch execution
 		u.BatchResults <- resp
 	}
-	conn.Close()
 }

@@ -87,6 +87,7 @@ func (s SocketServer) handleRequest(conn net.Conn) {
 	_, err := conn.Read(buf)
 	if err != nil {
 		fmt.Println("Error reading:", err.Error())
+		conn.Close()
 		return
 	}
 	sepTransCommand := strings.Split(string(buf[:]), ";")
@@ -95,9 +96,10 @@ func (s SocketServer) handleRequest(conn net.Conn) {
 	function, params := s.getRoute(command)
 	if function == nil {
 		fmt.Printf("Error: command not implemented '%s'\n", command)
+		conn.Close()
 		return
 	}
-	fmt.Println(command)
+	// fmt.Println(command)
 	res := function(transNum, params...)
 	// Send a response back to person contacting us.
 	conn.Write([]byte(res))
