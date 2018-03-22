@@ -48,6 +48,8 @@ type Query struct {
 	Params []interface{}
 }
 
+
+// Represents a response from a redis database
 type Response struct {
 	r interface{}
 	err error
@@ -345,7 +347,7 @@ func (u RedisDatabase) DbRequestWorker() {
 				reqQue = nil
 				reqQue = []*Query{}
 			}
-		case <- time.After(20 * time.Millisecond):
+		case <- time.After(u.PollRate * time.Millisecond):
 			u.MakeDbRequests(reqQue)
 			reqQue = nil
 			reqQue = []*Query{}
@@ -364,7 +366,7 @@ func (u RedisDatabase) MakeDbRequests(requestQue []*Query) {
 			} else if len(query.Params) == 2 {
 				conn.Send(query.Command, query.UserString, query.Params[0], query.Params[1])
 			} else {
-				// This is temp, but should never happen...
+				// Should never happen...
 				panic("More params then 3!")
 			}
 		}
