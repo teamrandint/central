@@ -32,7 +32,7 @@ func main() {
 
 	server := socketserver.NewSocketServer(serverAddr)
 	database := database.RedisDatabase{Addr: databaseAddr, Port: databasePort, DbRequests: make(chan *database.Query, 10),
-				BatchSize: 10, PollRate: 20, BatchResults: make(chan database.Response)}
+				BatchSize: 10, PollRate: 20, BatchResults: make(chan database.Response), DbPool: database.NewPool(databaseAddr, databasePort)}
 	logger := logger.AuditLogger{Addr: auditAddr}
 	buyTriggers := new(syncmap.Map)
 	sellTriggers := new(syncmap.Map)
