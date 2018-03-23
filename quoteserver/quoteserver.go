@@ -58,7 +58,7 @@ func quote(user string, stock string, transNum int) (decimal.Decimal, error) {
 	if err != nil {
 		return decimal.Decimal{}, err
 	}
-	conn.Close()
+	defer conn.Close()
 	reply := getReply(message)
 	go auditServer.QuoteServer("quoteserver", transNum, reply.quote.String(), reply.stock,
 		reply.user, reply.time, reply.key)
