@@ -16,6 +16,8 @@ docker build \
 --build-arg auditport=${auditport} \
 --build-arg quoteclientaddr=${quoteaddr} \
 --build-arg quoteclientport=${quoteport} \
+--build-arg triggeraddr=${triggeraddr} \
+--build-arg triggerport=${triggerport} \
 -t teamrandint/transactionserver .
 
 cd ../WebServer
@@ -40,8 +42,22 @@ docker build \
 --build-arg quoteport=${quoteport} \
 --build-arg auditaddr=${auditaddr} \
 --build-arg auditport=${auditport} \
+--build-arg legacyquoteaddr=${legacyquoteaddr} \
+--build-arg legacyquoteport=${legacyquoteaddr} \
 -t teamrandint/quoteserver .
 
-cd ..
+cd ../triggerserver
+docker build \
+--build-arg triggeraddr=${triggeraddr} \
+--build-arg triggerport=${triggerport} \
+--build-arg quoteaddr=${quoteaddr} \
+--build-arg quoteport=${quoteport} \
+--build-arg auditaddr=${auditaddr} \
+--build-arg auditport=${auditport} \
+--build-arg transaddr=${transaddr} \
+--build-arg transport=${transport} \
+-t teamrandint/triggerserver .
+
+cd ../parent
 rm images.tar
-docker save teamrandint/quoteserver teamrandint/transactionserver teamrandint/database teamrandint/webserver teamrandint/auditserver > images.tar
+docker save teamrandint/triggerserver teamrandint/quoteserver teamrandint/transactionserver teamrandint/database teamrandint/webserver teamrandint/auditserver > images.tar

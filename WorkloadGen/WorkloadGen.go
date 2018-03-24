@@ -3,10 +3,10 @@ package main
 import (
 	"bufio"
 	"fmt"
+	"io/ioutil"
 	"net/http"
 	"net/url"
 	"os"
-	"io/ioutil"
 	"regexp"
 	"strconv"
 	"strings"
@@ -45,21 +45,40 @@ func runRequests(serverAddr string, users map[string][]string, delay int) {
 
 		wg.Add(1)
 		go func(commands []string) {
+			//timeout := time.Duration(15 * time.Second)
+			client := http.Client{
+			//	Timeout: timeout,
+			}
+
 			// Issue login before executing any commands
-			resp, err := http.PostForm("http://"+serverAddr+"/"+"LOGIN"+"/", url.Values{"username": {userName}})
+			resp, err := client.PostForm("http://"+serverAddr+"/"+"LOGIN"+"/", url.Values{"username": {userName}})
 			if err != nil {
 				fmt.Println(err)
+			} else {
+				resp.Body.Close()
 			}
-			resp.Body.Close()
 
 			for _, command := range commands {
 				endpoint, values := parseCommand(command)
 				time.Sleep(time.Duration(delay) * time.Millisecond) // ADJUST THIS TO CHANGE DELAY
 				// fmt.Println("http://"+serverAddr+"/"+endpoint+"/", values)
+<<<<<<< HEAD
 				resp, err := http.PostForm("http://"+serverAddr+"/"+endpoint+"/", values)
 				if err != nil {
 					fmt.Println(err)
 					return
+=======
+				var resp *http.Response
+				var err error
+
+				for {
+					resp, err = client.PostForm("http://"+serverAddr+"/"+endpoint+"/", values)
+					if err != nil {
+						fmt.Println("Post timed out -- retrying")
+					} else {
+						break
+					}
+>>>>>>> master
 				}
 				resp.Body.Close()
 				atomic.AddUint64(&transcount, 1)

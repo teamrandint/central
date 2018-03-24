@@ -35,3 +35,9 @@ docker run -d -p ${transport}:${transport} \
 --net net \
 --ip ${transaddr} \
 teamrandint/transactionserver
+
+docker run -d -p ${triggerport}:${triggerport} \
+--name trigger \
+--net net \
+--ip ${triggeraddr} \
+teamrandint/triggerserver

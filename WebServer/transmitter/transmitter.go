@@ -3,8 +3,8 @@ package transmitter
 import (
 	"bufio"
 	"fmt"
-	"log"
 	"io/ioutil"
+	"log"
 	"net"
 	"net/http"
 	"net/url"
@@ -28,17 +28,6 @@ func NewTransmitter(addr string, prt string) *Transmitter {
 	transmitter.address = addr
 	transmitter.port = prt
 
-	// Create a connection to the specified server
-	var conn net.Conn
-	var err error
-	for err != nil {
-		conn, err = net.Dial("tcp", addr+":"+prt)
-		time.Sleep(time.Millisecond * 30)
-		log.Print(err)
-	}
-
-	transmitter.connection = conn
-
 	return transmitter
 }
 
@@ -46,19 +35,26 @@ func (trans *Transmitter) MakeRequest(transNum int, message string) string {
 	prefix := strconv.Itoa(transNum)
 	message = prefix + ";" + message
 	message += "\n"
-	conn, err := net.Dial("tcp", trans.address+":"+trans.port)
+	var conn net.Conn
+	var err error
+	for {
+		conn, err = net.DialTimeout(
+			"tcp",
+			trans.address+":"+trans.port,
+			time.Second*5,
+		)
 
-	if err != nil {
-		// Error in connection
-		log.Print(err)
-		return "-1"
+		if err != nil { // trans server down? retry
+			fmt.Println("Trans server timedout -- retrying")
+		} else {
+			break
+		}
 	}
-		
+
 	trans.connection = conn
 
-	// fmt.Println("Making request to transaction server")
 	fmt.Fprintf(trans.connection, message)
-	// fmt.Println("Waiting for response from transaction server")
+
 	reply, _ := bufio.NewReader(trans.connection).ReadString('\n')
 	trans.connection.Close()
 	return reply
@@ -66,7 +62,7 @@ func (trans *Transmitter) MakeRequest(transNum int, message string) string {
 
 func (trans *Transmitter) RetrieveDumplog(filename string) []byte {
 	auditAddr := "http://" + os.Getenv("auditaddr") + ":" + os.Getenv("auditport")
-	resp, err := http.PostForm(auditAddr + "/dumpLogRetrieve", url.Values{"filename": {filename}})
+	resp, err := http.PostForm(auditAddr+"/dumpLogRetrieve", url.Values{"filename": {filename}})
 	if err != nil {
 		log.Print(err)
 	}

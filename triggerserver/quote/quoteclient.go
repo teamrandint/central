@@ -3,7 +3,6 @@ package quoteclient
 import (
 	"fmt"
 	"io/ioutil"
-	"log"
 	"net/http"
 	"os"
 	"strconv"
@@ -15,7 +14,6 @@ func Query(user string, stock string, transNum int) (decimal.Decimal, error) {
 	http.DefaultTransport.(*http.Transport).MaxIdleConnsPerHost = 100
 	req, err := http.NewRequest("GET", "http://"+os.Getenv("quoteaddr")+":"+os.Getenv("quoteport")+"/quote", nil)
 	if err != nil {
-		log.Print(err)
 		panic(err)
 	}
 	q := req.URL.Query()
@@ -37,6 +35,7 @@ func Query(user string, stock string, transNum int) (decimal.Decimal, error) {
 	}
 
 	amount, err := ioutil.ReadAll(resp.Body)
+	fmt.Println("Query: ", user, stock, "=", string(amount))
 	if err != nil {
 		fmt.Printf("Error reading body: %s", err.Error())
 		return decimal.Decimal{}, err
