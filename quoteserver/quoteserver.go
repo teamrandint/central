@@ -49,10 +49,21 @@ func quote(user string, stock string, transNum int) (decimal.Decimal, error) {
 		d, _ := decimal.NewFromString(quote.(string))
 		return d, nil
 	}
-	conn, err := net.Dial("tcp", os.Getenv("legacyquoteaddr")+":"+os.Getenv("legacyquoteport"))
-	if err != nil {
-		return decimal.Decimal{}, err
+
+	var conn net.Conn
+	var err error
+	for {
+		conn, err = net.DialTimeout("tcp",
+			os.Getenv("legacyquoteaddr")+":"+os.Getenv("legacyquoteport"),
+			time.Second*5,
+		)
+		if err != nil { // trans server down? retry
+			fmt.Println("Legacy server timedout -- retrying")
+		} else {
+			break
+		}
 	}
+
 	request := fmt.Sprintf("%s,%s\n", stock, user)
 	fmt.Fprintf(conn, request)
 	message, err := bufio.NewReader(conn).ReadString('\n')

@@ -23,16 +23,23 @@ func Query(user string, stock string, transNum int) (decimal.Decimal, error) {
 	req.URL.RawQuery = q.Encode()
 
 	client := http.Client{}
-	resp, err := client.Do(req)
-	if err != nil {
-		fmt.Printf("Error connecting to the quote server: %s", err.Error())
-		return decimal.Decimal{}, err
+	var resp *http.Response
+	for {
+		resp, err = client.Do(req)
+
+		if err != nil { // trans server down? retry
+			fmt.Println("Quoteserver timedout -- retrying")
+		} else {
+			break
+		}
 	}
+
 	amount, err := ioutil.ReadAll(resp.Body)
 	fmt.Println("Query: ", user, stock, "=", string(amount))
 	if err != nil {
 		fmt.Printf("Error reading body: %s", err.Error())
 		return decimal.Decimal{}, err
 	}
+	resp.Body.Close()
 	return decimal.NewFromString(string(amount))
 }

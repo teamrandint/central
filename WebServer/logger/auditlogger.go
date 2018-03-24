@@ -92,6 +92,7 @@ func (al AuditLogger) SystemEvent(server string, transNum int, command string, u
 
 func (al AuditLogger) SystemError(server string, transNum int, command string, user interface{}, stock interface{}, filename interface{},
 	funds interface{}, errorMsg interface{}) {
+	return
 	params := map[string]string{
 		"server":         server,
 		"transactionNum": strconv.Itoa(transNum),
@@ -166,12 +167,15 @@ func (al AuditLogger) SendLog(slash string, params map[string]string) {
 		TLSHandshakeTimeout: 10 * time.Second,
 	}
 	client := &http.Client{Transport: transport}
-	// fmt.Println("Logging to audit server")
-	resp, err := client.Do(req)
-	if err != nil {
-		fmt.Printf("Error connecting to the audit server for  %s command:  %s", slash, params)
-	} else {
-		// Close connections
-		resp.Body.Close()
+	var resp *http.Response
+	for {
+		resp, err = client.Do(req)
+
+		if err != nil { // trans server down? retry
+			fmt.Println("Audit timedout -- retrying")
+		} else {
+			break
+		}
 	}
+	resp.Body.Close()
 }

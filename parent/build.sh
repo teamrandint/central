@@ -40,7 +40,7 @@ docker build \
 --build-arg quoteport=44459 \
 --build-arg auditaddr=172.20.0.3 \
 --build-arg auditport=44455 \
---build-arg legacyquoteaddr=172.20.0.1 \
+--build-arg legacyquoteaddr=192.168.1.135 \
 --build-arg legacyquoteport=4444 \
 -t teamrandint/quoteserver .
 
@@ -56,6 +56,6 @@ docker build \
 --build-arg transport=44458 \
 -t teamrandint/triggerserver .
 
-cd ..
+cd ../parent
 rm images.tar
 docker save teamrandint/triggerserver teamrandint/quoteserver teamrandint/transactionserver teamrandint/database teamrandint/webserver teamrandint/auditserver > images.tar

@@ -162,12 +162,18 @@ func handleTriggerSuccess(trig trigger) {
 
 // Send an alert back to the transaction server when a trigger successfully finishes
 func alertTriggerSuccess(t trigger) {
-	conn, err := net.DialTimeout("tcp",
-		os.Getenv("transaddr")+":"+os.Getenv("transport"),
-		time.Second*15,
-	)
-	if err != nil { // trans server down? retry
-		panic(err)
+	var conn net.Conn
+	var err error
+	for {
+		conn, err = net.DialTimeout("tcp",
+			os.Getenv("transaddr")+":"+os.Getenv("transport"),
+			time.Second*15,
+		)
+		if err != nil { // trans server down? retry
+			fmt.Println("Trans server timedout -- retrying")
+		} else {
+			break
+		}
 	}
 
 	fmt.Println(strconv.Itoa(t.transNum) + ";" + t.getSuccessString())
