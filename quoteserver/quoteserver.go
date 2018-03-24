@@ -1,17 +1,18 @@
 package main
 
 import (
-	"net/http"
-	"fmt"
-	"os"
-	"github.com/shopspring/decimal"
-	"net"
-	"time"
 	"bufio"
-	"github.com/patrickmn/go-cache"
-	"strconv"
+	"fmt"
+	"net"
+	"net/http"
+	"os"
 	"regexp"
 	"seng468/quoteserver/logger"
+	"strconv"
+	"time"
+
+	"github.com/patrickmn/go-cache"
+	"github.com/shopspring/decimal"
 )
 
 type QuoteReply struct {
@@ -48,10 +49,21 @@ func quote(user string, stock string, transNum int) (decimal.Decimal, error) {
 		d, _ := decimal.NewFromString(quote.(string))
 		return d, nil
 	}
-	conn, err := net.Dial("tcp", "quoteserve.seng:4444")
-	if err != nil {
-		return decimal.Decimal{}, err
+
+	var conn net.Conn
+	var err error
+	for {
+		conn, err = net.DialTimeout("tcp",
+			os.Getenv("legacyquoteaddr")+":"+os.Getenv("legacyquoteport"),
+			time.Second*5,
+		)
+		if err != nil { // trans server down? retry
+			fmt.Println("Legacy server timedout -- retrying")
+		} else {
+			break
+		}
 	}
+
 	request := fmt.Sprintf("%s,%s\n", stock, user)
 	fmt.Fprintf(conn, request)
 	message, err := bufio.NewReader(conn).ReadString('\n')
@@ -74,7 +86,7 @@ func quoteHandler(w http.ResponseWriter, r *http.Request) {
 	reply, err := quote(user, stock, transNum)
 	if err != nil {
 		w.WriteHeader(http.StatusBadRequest)
-		fmt.Println("Error receiving quote from quoteserve.seng:4444")
+		fmt.Println("Error receiving quote from legacy quote server", err)
 		return
 	}
 	fmt.Fprintf(w, reply.StringFixed(2))
@@ -89,8 +101,7 @@ func main() {
 	addr := os.Getenv("quoteaddr")
 	port := os.Getenv("quoteport")
 	fmt.Printf("Quote server listening on %s:%s\n", addr, port)
-	if err := http.ListenAndServe(addr + ":" + port, nil); err != nil {
+	if err := http.ListenAndServe(addr+":"+port, nil); err != nil {
 		panic(err)
 	}
 }
-
