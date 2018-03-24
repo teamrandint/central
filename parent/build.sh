@@ -14,8 +14,8 @@ docker build \
 --build-arg dbport=${dbport} \
 --build-arg auditaddr=${auditaddr} \
 --build-arg auditport=${auditport} \
---build-arg quoteclientaddr=${quoteaddr} \
---build-arg quoteclientport=${quoteport} \
+--build-arg quoteaddr=${quoteaddr} \
+--build-arg quoteport=${quoteport} \
 --build-arg triggeraddr=${triggeraddr} \
 --build-arg triggerport=${triggerport} \
 -t teamrandint/transactionserver .
