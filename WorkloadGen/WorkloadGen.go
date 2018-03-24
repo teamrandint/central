@@ -62,12 +62,7 @@ func runRequests(serverAddr string, users map[string][]string, delay int) {
 				endpoint, values := parseCommand(command)
 				time.Sleep(time.Duration(delay) * time.Millisecond) // ADJUST THIS TO CHANGE DELAY
 				// fmt.Println("http://"+serverAddr+"/"+endpoint+"/", values)
-<<<<<<< HEAD
-				resp, err := http.PostForm("http://"+serverAddr+"/"+endpoint+"/", values)
-				if err != nil {
-					fmt.Println(err)
-					return
-=======
+
 				var resp *http.Response
 				var err error
 
@@ -78,7 +73,6 @@ func runRequests(serverAddr string, users map[string][]string, delay int) {
 					} else {
 						break
 					}
->>>>>>> master
 				}
 				resp.Body.Close()
 				atomic.AddUint64(&transcount, 1)
