@@ -3,7 +3,7 @@ source ./.env
 cd ../auditserver
 docker build \
 --build-arg auditaddr=${auditaddr} \
---build-arg auditaddr=${auditaddr} \
+--build-arg auditport=${auditport} \
 -t teamrandint/auditserver . 
 
 cd ../transaction-server
