@@ -43,7 +43,7 @@ docker build \
 --build-arg auditaddr=${auditaddr} \
 --build-arg auditport=${auditport} \
 --build-arg legacyquoteaddr=${legacyquoteaddr} \
---build-arg legacyquoteport=${legacyquoteaddr} \
+--build-arg legacyquoteport=${legacyquoteport} \
 -t teamrandint/quoteserver .
 
 cd ../triggerserver
