@@ -1,59 +1,61 @@
+source ./.env
+
 cd ../auditserver
 docker build \
---build-arg auditaddr=172.20.0.3 \
---build-arg auditport=44455 \
+--build-arg auditaddr=${auditaddr} \
+--build-arg auditport=${auditport} \
 -t teamrandint/auditserver . 
 
 cd ../transaction-server
 docker build \
---build-arg transaddr=172.20.0.6 \
---build-arg transport=44458 \
---build-arg dbaddr=172.20.0.4 \
---build-arg dbport=44457 \
---build-arg auditaddr=172.20.0.3 \
---build-arg auditport=44455 \
---build-arg quoteaddr=172.20.0.7 \
---build-arg quoteport=44459 \
---build-arg triggeraddr=172.20.0.8 \
---build-arg triggerport=44456 \
+--build-arg transaddr=${transaddr} \
+--build-arg transport=${transport} \
+--build-arg dbaddr=${dbaddr} \
+--build-arg dbport=${dbport} \
+--build-arg auditaddr=${auditaddr} \
+--build-arg auditport=${auditport} \
+--build-arg quoteclientaddr=${quoteaddr} \
+--build-arg quoteclientport=${quoteport} \
+--build-arg triggeraddr=${triggeraddr} \
+--build-arg triggerport=${triggerport} \
 -t teamrandint/transactionserver .
 
 cd ../WebServer
 docker build \
---build-arg webaddr=172.20.0.5 \
---build-arg webport=44456 \
---build-arg auditaddr=172.20.0.3 \
---build-arg auditport=44455 \
---build-arg transaddr=172.20.0.6 \
---build-arg transport=44458 \
+--build-arg webaddr=${webaddr} \
+--build-arg webport=${webport} \
+--build-arg auditaddr=${auditaddr} \
+--build-arg auditport=${auditport} \
+--build-arg transaddr=${transaddr} \
+--build-arg transport=${transport} \
 -t teamrandint/webserver . 
 
 cd ../database
 docker build \
---build-arg dbaddr=172.20.0.4 \
---build-arg dbport=44457 \
+--build-arg dbaddr=${dbaddr} \
+--build-arg dbport=${dbport} \
 -t teamrandint/database . 
 
 cd ../quoteserver
 docker build \
---build-arg quoteaddr=172.20.0.7 \
---build-arg quoteport=44459 \
---build-arg auditaddr=172.20.0.3 \
---build-arg auditport=44455 \
---build-arg legacyquoteaddr=192.168.1.135 \
---build-arg legacyquoteport=4444 \
+--build-arg quoteaddr=${quoteaddr} \
+--build-arg quoteport=${quoteport} \
+--build-arg auditaddr=${auditaddr} \
+--build-arg auditport=${auditport} \
+--build-arg legacyquoteaddr=${legacyquoteaddr} \
+--build-arg legacyquoteport=${legacyquoteaddr} \
 -t teamrandint/quoteserver .
 
 cd ../triggerserver
 docker build \
---build-arg triggeraddr=172.20.0.8 \
---build-arg triggerport=44456 \
---build-arg quoteaddr=172.20.0.7 \
---build-arg quoteport=44459 \
---build-arg auditaddr=172.20.0.3 \
---build-arg auditport=44455 \
---build-arg transaddr=172.20.0.6 \
---build-arg transport=44458 \
+--build-arg triggeraddr=${triggeraddr} \
+--build-arg triggerport=${triggerport} \
+--build-arg quoteaddr=${quoteaddr} \
+--build-arg quoteport=${quoteport} \
+--build-arg auditaddr=${auditaddr} \
+--build-arg auditport=${auditport} \
+--build-arg transaddr=${transaddr} \
+--build-arg transport=${transport} \
 -t teamrandint/triggerserver .
 
 cd ../parent

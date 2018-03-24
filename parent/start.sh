@@ -1,41 +1,43 @@
+source ./.env
+
 docker network create net \
 --driver bridge \
 --subnet 172.20.0.0/16 \
 --gateway 172.20.0.1
 
-docker run -d -p 44457:44457 \
+docker run -d -p ${dbport}:${dbport} \
 --name database \
 --net net \
---ip 172.20.0.4 \
+--ip ${dbaddr} \
 teamrandint/database 
 
-docker run -d -p 44455:44455 \
+docker run -d -p ${auditport}:${auditport} \
 --name audit \
 --net net \
---ip 172.20.0.3 \
+--ip ${auditaddr} \
 teamrandint/auditserver 
 
-docker run -d -p 44456:44456 \
+docker run -d -p ${webport}:${webport} \
 --name web \
 --net net \
---ip 172.20.0.5 \
+--ip ${webaddr} \
 teamrandint/webserver
 
-docker run -d -p 44459:44459 \
+docker run -d -p ${quoteport}:${quoteport} \
 --add-host quoteserve.seng:172.20.0.1 \
 --name quote \
 --net net \
---ip 172.20.0.7 \
+--ip ${quoteaddr} \
 teamrandint/quoteserver
 
-docker run -d -p 44458:44458 \
+docker run -d -p ${transport}:${transport} \
 --name trans \
 --net net \
---ip 172.20.0.6 \
+--ip ${transaddr} \
 teamrandint/transactionserver
 
-docker run -d -p 44460:44460 \
+docker run -d -p ${triggerport}:${triggerport} \
 --name trigger \
 --net net \
---ip 172.20.0.8 \
+--ip ${triggeraddr} \
 teamrandint/triggerserver
