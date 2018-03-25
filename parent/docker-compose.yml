@@ -1,20 +1,8 @@
-#webaddr=0.0.0.0
-#webport=44456
-#
-#auditaddr=localhost
-#auditport=44455
-#
-#dbaddr=localhost
-#dbport=44457
-#
-#transaddr=localhost
-#transport=44458
-
 version: '3'
 services:
     web:
         build:
-            context: ./WebServer
+            context: ../WebServer
             dockerfile: Dockerfile
             args:
                 - webaddr
@@ -28,34 +16,34 @@ services:
             - "database"
             - "audit"
         env_file:
-            - env
+            - .env
         ports:
-            - "44456:44456"
+            - "${webport}:${webport}"
     audit:
         build:
-            context: ./auditserver
+            context: ../auditserver
             dockerfile: Dockerfile
             args:
                 - auditaddr
                 - auditport
         env_file:
-            - env
+            - .env
         ports:
-            - "44455:44455"
+            - "${auditport}:${auditport}"
     database:
         build:
-            context: ./database
+            context: ../database
             dockerfile: Dockerfile
             args:
                 - dbaddr
                 - dbport
         env_file:
-            - env
+            - .env
         ports:
-            - "44457:44457"
+            - "${dbport}:${dbport}"
     transaction:
         build:
-            context: ./transaction-server
+            context: ../transaction-server
             dockerfile: Dockerfile
             args:
                 - transaddr
@@ -64,12 +52,30 @@ services:
                 - dbport
                 - auditaddr
                 - auditport
+                - quoteclientaddr
+                - quoteclientport 
         links:
             - database
         depends_on:
             - "database"
             - "audit"
+            - "quote"
         env_file:
-            - env
+            - .env
         ports:
-            - "44458:44458"
+            - "${transport}:${transport}"
+    quote:
+        build:
+            context: ../quoteserver
+            dockerfile: Dockerfile
+            args:
+                - auditaddr
+                - auditport
+                - quoteaddr
+                - quoteport 
+        depends_on:
+            - "audit"
+        env_file:
+            - .env
+        ports:
+            - "${quoteport}:${quoteport}"

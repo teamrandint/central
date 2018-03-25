@@ -3,13 +3,14 @@ package transmitter
 import (
 	"bufio"
 	"fmt"
-	"log"
 	"io/ioutil"
+	"log"
 	"net"
 	"net/http"
 	"net/url"
 	"os"
 	"strconv"
+	"time"
 )
 
 type Transmitters interface {
@@ -34,14 +35,22 @@ func (trans *Transmitter) MakeRequest(transNum int, message string) string {
 	prefix := strconv.Itoa(transNum)
 	message = prefix + ";" + message
 	message += "\n"
-	conn, err := net.Dial("tcp", trans.address+":"+trans.port)
+	var conn net.Conn
+	var err error
+	for {
+		conn, err = net.DialTimeout(
+			"tcp",
+			trans.address+":"+trans.port,
+			time.Second*5,
+		)
 
-	if err != nil {
-		// Error in connection
-		log.Print(err)
-		return "-1"
+		if err != nil { // trans server down? retry
+			fmt.Println("Trans server timedout -- retrying")
+		} else {
+			break
+		}
 	}
-		
+
 	trans.connection = conn
 
 	fmt.Fprintf(trans.connection, message)
@@ -53,7 +62,7 @@ func (trans *Transmitter) MakeRequest(transNum int, message string) string {
 
 func (trans *Transmitter) RetrieveDumplog(filename string) []byte {
 	auditAddr := "http://" + os.Getenv("auditaddr") + ":" + os.Getenv("auditport")
-	resp, err := http.PostForm(auditAddr + "/dumpLogRetrieve", url.Values{"filename": {filename}})
+	resp, err := http.PostForm(auditAddr+"/dumpLogRetrieve", url.Values{"filename": {filename}})
 	if err != nil {
 		log.Print(err)
 	}

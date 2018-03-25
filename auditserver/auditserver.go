@@ -27,8 +27,9 @@ func userCommandHandler(w http.ResponseWriter, r *http.Request) {
 		Funds:          query.Get("funds"),
 	}
 	mutex.Lock()
-	defer mutex.Unlock()
 	eventlog.Insert(v)
+	mutex.Unlock()
+
 	w.Write([]byte("OK"))
 }
 
@@ -48,8 +49,9 @@ func quoteServerHandler(w http.ResponseWriter, r *http.Request) {
 		Cryptokey:       query.Get("cryptokey"),
 	}
 	mutex.Lock()
-	defer mutex.Unlock()
 	eventlog.Insert(v)
+	mutex.Unlock()
+
 	w.Write([]byte("OK"))
 }
 
@@ -67,8 +69,9 @@ func accountTransactionHandler(w http.ResponseWriter, r *http.Request) {
 		Funds:          query.Get("funds"),
 	}
 	mutex.Lock()
-	defer mutex.Unlock()
 	eventlog.Insert(v)
+	mutex.Unlock()
+
 	w.Write([]byte("OK"))
 }
 
@@ -88,8 +91,9 @@ func systemEventHandler(w http.ResponseWriter, r *http.Request) {
 		Funds:          query.Get("funds"),
 	}
 	mutex.Lock()
-	defer mutex.Unlock()
 	eventlog.Insert(v)
+	mutex.Unlock()
+
 	w.Write([]byte("OK"))
 }
 
@@ -110,8 +114,9 @@ func errorEventHandler(w http.ResponseWriter, r *http.Request) {
 		ErrorMessage:   query.Get("errorMessage"),
 	}
 	mutex.Lock()
-	defer mutex.Unlock()
 	eventlog.Insert(v)
+	mutex.Unlock()
+
 	w.Write([]byte("OK"))
 }
 
@@ -131,8 +136,9 @@ func dumpLogHandler(w http.ResponseWriter, r *http.Request) {
 	fmt.Printf("Dumping log to %v, with user set as %v", dumpfileB, userLog)
 
 	mutex.Lock()
-	defer mutex.Unlock()
 	eventlog.Write(file)
+	mutex.Unlock()
+
 	file.Close()
 }
 
