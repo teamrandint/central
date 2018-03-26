@@ -15,7 +15,7 @@
   User: <p id="usernameText"></p>
   </div>
   Commmand:
-  <select>
+  <select id="commands" onchange="commandChanged()">
   	<option value="ADD">Add</option>
   	<option value="QUOTE">Quote</option>
   	<option value="BUY">Buy</option>
@@ -34,7 +34,11 @@
     <option value="DISPLAY_SUMMARY">Display summary</option>
   </select>
 </div>
-<div id="inputDiv"></div>
+<div id="inputDiv" class="inputDiv">
+  <p id="inputOneTitle"/><input type="text" id="textInputOne" value="">
+  <p id="inputTwoTitle"/><input type="text" id="textInputTwo" value="">
+  <button onclick="submitRequest()">Submit</button>
+</div>
 <div id="resultsDiv"></div>
 </body>
 </html>
