@@ -23,7 +23,8 @@ type TransactionServer struct {
 }
 
 func main() {
-	serverAddr := os.Getenv("transaddr") + ":" + os.Getenv("transport")
+
+	serverAddr := ":44458" //+ os.Getenv("transport")
 	databaseAddr := "tcp"
 	databasePort := os.Getenv("dbaddr") + ":" + os.Getenv("dbport")
 	auditAddr := "http://" + os.Getenv("auditaddr") + ":" + os.Getenv("auditport")
@@ -563,7 +564,7 @@ func (ts TransactionServer) TriggerSuccess(transNum int, params ...string) strin
 	price := params[2]
 	amount := params[3]
 	action := params[4]
-	fmt.Println("RECEIVED A SUCCESSFUL TRIGGER: ", user, stock, price, amount, action)
+	//fmt.Println("RECEIVED A SUCCESSFUL TRIGGER: ", user, stock, price, amount, action)
 	// TODO
 	return "1"
 }

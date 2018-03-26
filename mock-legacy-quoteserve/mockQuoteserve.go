@@ -10,7 +10,7 @@ import (
 )
 
 const (
-	connHost = "172.20.0.1" // Run on the local machine
+	connHost = "172.19.0.1" // Run on the local machine
 	connPort = "4444"       // Same port as on the regular system
 	connType = "tcp"        // NOTE: not HTPP
 )

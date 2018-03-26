@@ -78,6 +78,7 @@ func (webServer *WebServer) quoteHandler(writer http.ResponseWriter, request *ht
 }
 
 func (webServer *WebServer) buyHandler(writer http.ResponseWriter, request *http.Request, title string) {
+	fmt.Println("BUY")
 	currTransNum := int(atomic.AddInt64(&webServer.transactionNumber, 1))
 	username := request.FormValue("username")
 	stock := request.FormValue("stock")

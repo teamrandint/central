@@ -95,7 +95,7 @@ func (s SocketServer) handleRequest(conn net.Conn) {
 	command := sepTransCommand[1]
 	function, params := s.getRoute(command)
 	if function == nil {
-		fmt.Printf("Error: command not implemented '%s'\n", command)
+		//fmt.Printf("Error: command not implemented '%s'\n", command)
 		conn.Close()
 		return
 	}
