@@ -447,10 +447,6 @@ func (webServer *WebServer) displaySummaryHandler(writer http.ResponseWriter, re
 	}
 }
 
-func (webServer *WebServer) genericHandler(writer http.ResponseWriter, request *http.Request) {
-	fmt.Fprintf(writer, "Hello from end point %s!", request.URL.Path[1:])
-}
-
 func main() {
 	serverAddress := os.Getenv("webaddr") + ":" + os.Getenv("webport")
 	auditAddr := "http://" + os.Getenv("auditaddr") + ":" + os.Getenv("auditport")
@@ -464,7 +460,7 @@ func main() {
 		validPath:         regexp.MustCompile("^/(ADD|QUOTE|BUY|COMMIT_BUY|CANCEL_BUY|SELL|COMMIT_SELL|CANCEL_SELL|SET_BUY_AMOUNT|CANCEL_SET_BUY|SET_BUY_TRIGGER|SET_SELL_AMOUNT|SET_SELL_TRIGGER|CANCEL_SET_SELL|DUMPLOG|DISPLAY_SUMMARY|LOGIN)/$"),
 	}
 
-	http.HandleFunc("/", webServer.genericHandler)
+	http.Handle("/", http.FileServer(http.Dir("./html")))
 	http.HandleFunc("/ADD/", webServer.addHandler)
 	http.HandleFunc("/QUOTE/", webServer.quoteHandler)
 	http.HandleFunc("/BUY/", webServer.buyHandler)
