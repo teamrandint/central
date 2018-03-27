@@ -58,5 +58,8 @@ docker image build \
 --build-arg transport=${transport} \
 -t teamrandint/triggerserver .
 
-cd ../nginx
-docker image build -t teamrandint/proxy .
+docker pull dockercloud/haproxy
+
+rm images.tar
+docker save teamrandint/triggerserver teamrandint/quoteserver teamrandint/transactionserver teamrandint/database teamrandint/webserver teamrandint/auditserver dockercloud/haproxy > images.tar
+

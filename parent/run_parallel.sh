@@ -31,7 +31,7 @@ if [ $MOCK = true ] ;
         ../mock-legacy-quoteserve/mockQuoteServe &
 fi
 
-docker service rm $(docker service ls -q)
+docker service  rm stack_trigger stack_quote stack_transaction stack_database stack_audit stack_proxy_web
 env $(cat .env | grep ^[A-Za-z_] | xargs) docker stack deploy -c docker-compose-deploy.yml stack
 
 echo "check docker service ls to make sure services are ready before running workload gen"
