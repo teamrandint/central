@@ -97,8 +97,6 @@ var re = regexp.MustCompile("(?P<quote>.+),(?P<stock>.+),(?P<user>.+),(?P<time>.
 var auditServer = logger.AuditLogger{Addr: "http://" + os.Getenv("auditaddr") + ":" + os.Getenv("auditport")}
 
 func main() {
-	host, _ := os.Hostname()
-	os.Setenv("quoteaddr", host)
 	http.HandleFunc("/quote", quoteHandler)
 	addr := os.Getenv("quoteaddr")
 	port := os.Getenv("quoteport")
