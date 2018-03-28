@@ -180,7 +180,7 @@ function submitRequest() {
     });
 }
 
-function displaySuccess(responseText) {
+function displaySuccess(data) {
 	var successMsg = submitRequest.command.toLowerCase().replace(/\b\w/g, l => l.toUpperCase());
 
 	if (submitRequest.amount !== 0) {
@@ -191,8 +191,14 @@ function displaySuccess(responseText) {
 	}
 	successMsg += " successful.";
 
+	// Display different message for successful quotes
 	if (submitRequest.command.localeCompare('QUOTE') === 0) {
-		successMsg = "Stock: " + submitRequest.stock + " - $" + responseText;
+		successMsg = "Stock: " + submitRequest.stock + " - $" + data;
+	}
+
+	// Handle dumplog
+	if (submitRequest.command.localeCompare('DUMPLOG') === 0) {
+		// DO something with the data
 	}
 
 	$('#resultsDiv').text(successMsg);

@@ -1,6 +1,10 @@
 var URL = "http://172.20.0.5:44456/";
 var username = ""
 
+$(document).ready(function(){
+	$('#userName').on('click', () => $('#userName').val(''));
+});
+
 // Logs the user into the webserver.
 function loginRequest() {
 	var userName = $('#userName').val();
