@@ -20,6 +20,8 @@ $(document).ready(function(){
 
     // bind 
     $('#submitButton').on('click', submitRequest);
+    $('#textInputOne').on('click', () => $('#textInputOne').val(''));
+    $('#textInputTwo').on('click', () => $('#textInputTwo').val(''));
 });
 
 function checkLogin(userName) {
@@ -168,7 +170,7 @@ function submitRequest() {
             // Clear values from inputs
             $('#textInputOne').val('');
             $('#textInputTwo').val('');
-    		displaySuccess();
+    		displaySuccess(data);
     	},
     	error: function(jqXHR, textStatus, errorThrown) {
     		// Display error message to user.
@@ -178,7 +180,7 @@ function submitRequest() {
     });
 }
 
-function displaySuccess() {
+function displaySuccess(responseText) {
 	var successMsg = submitRequest.command.toLowerCase().replace(/\b\w/g, l => l.toUpperCase());
 
 	if (submitRequest.amount !== 0) {
@@ -187,7 +189,12 @@ function displaySuccess() {
 	if (submitRequest.stock.localeCompare('') !== 0) {
 		successMsg += " Stock: " + submitRequest.stock;
 	}
-	$('#resultsDiv').text(successMsg + " successful.");
-    // TODO: add displaying returned quote information here.
+	successMsg += " successful.";
+
+	if (submitRequest.command.localeCompare('QUOTE') === 0) {
+		successMsg = "Stock: " + submitRequest.stock + " - $" + responseText;
+	}
+
+	$('#resultsDiv').text(successMsg);
     // TODO: Open save prompt for dumplog
 }
