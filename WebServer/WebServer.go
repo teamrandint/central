@@ -52,7 +52,7 @@ func (webServer *WebServer) addHandler(writer http.ResponseWriter, request *http
 
 	resp := webServer.transmitter.MakeRequest(currTransNum, "ADD,"+username+","+amount)
 	if resp == "-1" {
-		go webServer.logger.SystemError(webServer.Name, currTransNum, "ADD",
+		webServer.logger.SystemError(webServer.Name, currTransNum, "ADD",
 			username, nil, nil, nil, "Bad response from transactionserv")
 		http.Error(writer, "Invalid Request", 400)
 		return
@@ -75,6 +75,7 @@ func (webServer *WebServer) quoteHandler(writer http.ResponseWriter, request *ht
 		http.Error(writer, "Invalid Request", 400)
 		return
 	}
+	writer.Write([]byte(resp))
 }
 
 func (webServer *WebServer) buyHandler(writer http.ResponseWriter, request *http.Request) {
@@ -118,7 +119,7 @@ func (webServer *WebServer) commitBuyHandler(writer http.ResponseWriter, request
 	val, ok := webServer.userSessions.Load(username)
 	// User must be logged in to execute any commands.
 	if !ok {
-		http.Error(writer, "Invalid request", 400)
+		http.Error(writer, "Must be logged in to perform commands", 400)
 		return
 	}
 	userSession := val.(*usersessions.UserSession)
@@ -149,7 +150,7 @@ func (webServer *WebServer) commitBuyHandler(writer http.ResponseWriter, request
 	if resp == "-1" {
 		webServer.logger.SystemError(webServer.Name, currTransNum, "COMMIT_BUY",
 			username, nil, nil, nil, "Bad response from transactionserv")
-		http.Error(writer, "Bad response from transactionserv", 400)
+		http.Error(writer, "Invalid request", 400)
 		return
 	}
 	// Pop last sell off the pending list.
@@ -166,7 +167,7 @@ func (webServer *WebServer) cancelBuyHandler(writer http.ResponseWriter, request
 	val, ok := webServer.userSessions.Load(username)
 	// User must be logged in to execute any commands.
 	if !ok {
-		http.Error(writer, "must be logged in", 400)
+		http.Error(writer, "Must be logged in to perform commands", 400)
 		return
 	}
 	userSession := val.(*usersessions.UserSession)
@@ -184,7 +185,7 @@ func (webServer *WebServer) cancelBuyHandler(writer http.ResponseWriter, request
 	if resp == "-1" {
 		webServer.logger.SystemError(webServer.Name, currTransNum, "CANCEL_BUY",
 			username, nil, nil, nil, "Bad response from transactionserv")
-		http.Error(writer, "Bad response from transactionserv", 400)
+		http.Error(writer, "Invalid request", 400)
 		return
 	}
 	// Pop last sell off the pending list.
@@ -204,7 +205,7 @@ func (webServer *WebServer) sellHandler(writer http.ResponseWriter, request *htt
 	val, ok := webServer.userSessions.Load(username)
 	// User must be logged in to execute any commands.
 	if !ok {
-		http.Error(writer, "must be logged in to execute any commands", 400)
+		http.Error(writer, "Must be logged in to perform commands", 400)
 		return
 	}
 	userSession := val.(*usersessions.UserSession)
@@ -230,7 +231,7 @@ func (webServer *WebServer) commitSellHandler(writer http.ResponseWriter, reques
 	val, ok := webServer.userSessions.Load(username)
 	// User must be logged in to execute any commands.
 	if !ok {
-		http.Error(writer, "must be logged in to execute any commands", 400)
+		http.Error(writer, "Must be logged in to perform commands", 400)
 		return
 	}
 	userSession := val.(*usersessions.UserSession)
@@ -262,7 +263,7 @@ func (webServer *WebServer) commitSellHandler(writer http.ResponseWriter, reques
 	if resp == "-1" {
 		webServer.logger.SystemError(webServer.Name, currTransNum, "COMMIT_SELL",
 			username, nil, nil, nil, "Bad response from transactionserv")
-		http.Error(writer, "Bad response from transactionserv", 400)
+		http.Error(writer, "Invalid request", 400)
 		return
 	}
 	// Pop last sell off the pending list.
@@ -278,7 +279,7 @@ func (webServer *WebServer) cancelSellHandler(writer http.ResponseWriter, reques
 	val, ok := webServer.userSessions.Load(username)
 	// User must be logged in to execute any commands.
 	if !ok {
-		http.Error(writer, " must be logged in to execute any command", 400)
+		http.Error(writer, "Must be logged in to perform commands", 400)
 		return
 	}
 	userSession := val.(*usersessions.UserSession)
@@ -286,7 +287,7 @@ func (webServer *WebServer) cancelSellHandler(writer http.ResponseWriter, reques
 	if !userSession.HasPendingSells() {
 		webServer.logger.SystemError(webServer.Name, currTransNum, "CANCEL_SELL",
 			username, nil, nil, nil, "User has no pending sells")
-		http.NotFound(writer, request)
+		http.Error(writer, "No pending sells to cancel", 400)
 		//fmt.Printf("No sells to cancel for user %s\n", username)
 		return
 	}

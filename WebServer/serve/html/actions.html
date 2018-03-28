@@ -7,7 +7,7 @@
   <script src="https://ajax.googleapis.com/ajax/libs/jquery/1.12.2/jquery.min.js"></script>
 </head>
 <body>
-<script type="text/javascript" src="js/userActions.js"></script>
+
 <div id="navigation">
   <h1>Day Trading</h1>
   <h2>Choose a command </h2>
@@ -35,10 +35,11 @@
   </select>
 </div>
 <div id="inputDiv" class="inputDiv">
-  <p id="inputOneTitle"/><input type="text" id="textInputOne" value="">
-  <p id="inputTwoTitle"/><input type="text" id="textInputTwo" value="">
-  <button onclick="submitRequest()">Submit</button>
+  <p id="inputOneTitle">Amount:</p><input type="number" id="textInputOne" value="">
+  <p id="inputTwoTitle"></p><input type="text" id="textInputTwo" value="">
+  <button id="submitButton" onclick="submitRequest()">Submit</button>
 </div>
 <div id="resultsDiv"></div>
+<script type="text/javascript" src="js/userActions.js"></script>
 </body>
 </html>
