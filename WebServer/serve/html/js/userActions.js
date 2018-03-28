@@ -8,12 +8,18 @@ var submitRequest;
 $(document).ready(function(){
 	userName = getCookie("dayTradingUsername");
 	// Check if user has a valid login
-	// checkLogin(userName);
+	checkLogin(userName);
+
+    // TODO: pull account information from database
+
 	// Main logic of the program here!
 	$('#usernameText').text(userName);
 	// Hide inputs by default
 	$('#inputTwoTitle').hide();
 	$('#textInputTwo').hide();
+
+    // bind 
+    $('#submitButton').on('click', submitRequest);
 });
 
 function checkLogin(userName) {
@@ -159,9 +165,9 @@ function submitRequest() {
     	data: params,
     	type: 'POST',
     	success: function(data, status) {
-    		// Clear values from inputs
-    		$('#textInputOne').val('');
-    		$('#textInputTwo').val('');
+            // Clear values from inputs
+            $('#textInputOne').val('');
+            $('#textInputTwo').val('');
     		displaySuccess();
     	},
     	error: function(jqXHR, textStatus, errorThrown) {
@@ -174,6 +180,7 @@ function submitRequest() {
 
 function displaySuccess() {
 	var successMsg = submitRequest.command.toLowerCase().replace(/\b\w/g, l => l.toUpperCase());
+
 	if (submitRequest.amount !== 0) {
 		successMsg += " Amount: $" + submitRequest.amount;
 	}
@@ -181,4 +188,6 @@ function displaySuccess() {
 		successMsg += " Stock: " + submitRequest.stock;
 	}
 	$('#resultsDiv').text(successMsg + " successful.");
+    // TODO: add displaying returned quote information here.
+    // TODO: Open save prompt for dumplog
 }
