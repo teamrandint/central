@@ -73,10 +73,14 @@ services:
           - web
         environment:
           - BALANCE=leastconn
+          - OPTION=http-keep-alive
+          - MAXCONN=99999
+          - EXTRA_ROUTE_SETTINGS=maxconn 9999
         volumes:
           - /var/run/docker.sock:/var/run/docker.sock
         ports:
           - ${proxyport}:${proxyport}
+          - "1936:1936"
         networks:
           - overlay-network
         deploy:

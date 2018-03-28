@@ -24,7 +24,7 @@ type TransactionServer struct {
 
 func main() {
 
-	serverAddr := ":44458" //+ os.Getenv("transport")
+	serverAddr := ":" + os.Getenv("transport")
 	databaseAddr := "tcp"
 	databasePort := os.Getenv("dbaddr") + ":" + os.Getenv("dbport")
 	auditAddr := "http://" + os.Getenv("auditaddr") + ":" + os.Getenv("auditport")
@@ -45,23 +45,23 @@ func main() {
 		TriggerClient: triggerclient,
 	}
 
-	server.Route("ADD,<user>,<amount>", ts.Add)
-	server.Route("QUOTE,<user>,<stock>", ts.Quote)
-	server.Route("BUY,<user>,<stock>,<amount>", ts.Buy)
-	server.Route("COMMIT_BUY,<user>", ts.CommitBuy)
-	server.Route("CANCEL_BUY,<user>", ts.CancelBuy)
-	server.Route("SELL,<user>,<stock>,<amount>", ts.Sell)
-	server.Route("COMMIT_SELL,<user>", ts.CommitBuy)
-	server.Route("CANCEL_SELL,<user>", ts.CancelBuy)
-	server.Route("SET_BUY_AMOUNT,<user>,<stock>,<amount>", ts.SetBuyAmount)
-	server.Route("CANCEL_SET_BUY,<user>,<stock>", ts.CancelSetBuy)
-	server.Route("SET_BUY_TRIGGER,<user>,<stock>,<amount>", ts.SetBuyTrigger)
-	server.Route("SET_SELL_AMOUNT,<user>,<stock>,<amount>", ts.SetSellAmount)
-	server.Route("SET_SELL_TRIGGER,<user>,<stock>,<amount>", ts.SetSellTrigger)
-	server.Route("TRIGGER_SUCCESS,<user>,<stock>,<price>,<amount>,<action>", ts.TriggerSuccess)
-	server.Route("CANCEL_SET_SELL,<user>,<stock>", ts.CancelSetSell)
-	server.Route("DUMPLOG,<user>,<filename>", ts.DumpLogUser)
-	server.Route("DISPLAY_SUMMARY,<user>", ts.DisplaySummary)
+	server.Route("ADD", ts.Add)
+	server.Route("QUOTE", ts.Quote)
+	server.Route("BUY", ts.Buy)
+	server.Route("COMMIT_BUY", ts.CommitBuy)
+	server.Route("CANCEL_BUY", ts.CancelBuy)
+	server.Route("SELL", ts.Sell)
+	server.Route("COMMIT_SELL", ts.CommitBuy)
+	server.Route("CANCEL_SELL", ts.CancelBuy)
+	server.Route("SET_BUY_AMOUNT", ts.SetBuyAmount)
+	server.Route("CANCEL_SET_BUY", ts.CancelSetBuy)
+	server.Route("SET_BUY_TRIGGER", ts.SetBuyTrigger)
+	server.Route("SET_SELL_AMOUNT", ts.SetSellAmount)
+	server.Route("SET_SELL_TRIGGER", ts.SetSellTrigger)
+	server.Route("TRIGGER_SUCCESS", ts.TriggerSuccess)
+	server.Route("CANCEL_SET_SELL", ts.CancelSetSell)
+	server.Route("DUMPLOG", ts.DumpLogUser)
+	server.Route("DISPLAY_SUMMARY", ts.DisplaySummary)
 	go ts.UserDatabase.DbRequestWorker()
 	server.Run()
 }

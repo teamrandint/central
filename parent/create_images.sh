@@ -60,6 +60,6 @@ docker image build \
 
 docker pull dockercloud/haproxy
 
-rm images.tar
+cd ../parent
 docker save teamrandint/triggerserver teamrandint/quoteserver teamrandint/transactionserver teamrandint/database teamrandint/webserver teamrandint/auditserver dockercloud/haproxy > images.tar
 
