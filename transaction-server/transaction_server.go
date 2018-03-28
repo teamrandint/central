@@ -559,11 +559,11 @@ func (ts TransactionServer) CancelSetSell(transNum int, params ...string) string
 // Once a successfully completed trigger is received, complete the transaction
 // from a user's reserve account to their main account.
 func (ts TransactionServer) TriggerSuccess(transNum int, params ...string) string {
-	user := params[0]
-	stock := params[1]
-	price := params[2]
-	amount := params[3]
-	action := params[4]
+	//user := params[0]
+	//stock := params[1]
+	//price := params[2]
+	//amount := params[3]
+	//action := params[4]
 	//fmt.Println("RECEIVED A SUCCESSFUL TRIGGER: ", user, stock, price, amount, action)
 	// TODO
 	return "1"

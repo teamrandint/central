@@ -74,8 +74,8 @@ services:
         environment:
           - BALANCE=leastconn
           - OPTION=http-keep-alive
-          - MAXCONN=99999
-          - EXTRA_ROUTE_SETTINGS=maxconn 9999
+          - MAXCONN=9999
+          - EXTRA_ROUTE_SETTINGS=maxconn 999
         volumes:
           - /var/run/docker.sock:/var/run/docker.sock
         ports:

@@ -7,6 +7,7 @@ import (
 	"regexp"
 	"strconv"
 	"strings"
+	"bytes"
 )
 
 type SocketServer struct {
@@ -54,12 +55,37 @@ func (s SocketServer) Run() {
 }
 
 func (s SocketServer) getRoute(command string) (func(transNum int, args ...string) string, []string) {
-	result := strings.Split(command, ",")
+	command = string(bytes.Trim([]byte(command), "\x00"))
+	result := strings.Split(strings.TrimSpace(command), ",")
 	function := s.funcMap[result[0]]
-	if function == nil {
+	params := result[1:]
+	if result[len(result) -1] == "" {
 		return nil, nil
 	}
-	return function, result[1:]
+	switch result[0] {
+		case "COMMIT_BUY", "CANCEL_BUY", "COMMIT_SELL", "CANCEL_SELL", "DISPLAY_SUMMARY":
+			if len(params) != 1 {
+				return nil, nil
+			}
+			break
+		case "ADD", "QUOTE", "CANCEL_SET_BUY", "CANCEL_SET_SELL":
+			if len(params) != 2 {
+				return nil, nil
+			}
+			break
+		case "BUY", "SELL", "SET_BUY_AMOUNT", "SET_BUY_TRIGGER", "SET_SELL_TRIGGER", "SET_SELL_AMOUNT":
+			if len(params) != 3 {
+				return nil, nil
+			}
+			break
+		case "DUMPLOG":
+			if len(params) != 1 || len(params) != 2 {
+				return nil, nil
+			}
+		default:
+			return nil, nil
+	}
+	return function, params
 }
 
 // Handles incoming requests.
@@ -67,14 +93,14 @@ func (s SocketServer) handleRequest(conn net.Conn) {
 	// Make a buffer to hold incoming data.
 	buf := make([]byte, 1024)
 	// Read the incoming connection into the buffer.
-	_, err := conn.Read(buf)
+	recv, err := conn.Read(buf)
 	if err != nil {
 		fmt.Println("Error reading:", err.Error())
 		conn.Write([]byte("-1"))
 		conn.Close()
 		return
 	}
-	sepTransCommand := strings.Split(string(buf[:]), ";")
+	sepTransCommand := strings.Split(string(buf[:recv]), ";")
 	transNum, _ := strconv.Atoi(sepTransCommand[0])
 	command := sepTransCommand[1]
 	function, params := s.getRoute(command)
@@ -84,7 +110,6 @@ func (s SocketServer) handleRequest(conn net.Conn) {
 		conn.Close()
 		return
 	}
-	// fmt.Println(command)
 	res := function(transNum, params...)
 	// Send a response back to person contacting us.
 	conn.Write([]byte(res))
