@@ -24,6 +24,7 @@ type QuoteReply struct {
 }
 
 func getReply(msg string) *QuoteReply {
+	fmt.Println("from quoteserver: " + msg)
 	n1 := re.SubexpNames()
 	r2 := re.FindAllStringSubmatch(msg, -1)[0]
 
@@ -34,6 +35,7 @@ func getReply(msg string) *QuoteReply {
 
 	quote, _ := decimal.NewFromString(res["quote"])
 	timestamp, _ := strconv.ParseUint(res["time"], 10, 64)
+	fmt.Println("cryptokey val: " + res["key"])
 	return &QuoteReply{
 		quote: quote,
 		stock: res["stock"],
@@ -65,7 +67,8 @@ func quote(user string, stock string, transNum int) (decimal.Decimal, error) {
 	}
 
 	request := fmt.Sprintf("%s,%s\n", stock, user)
-	fmt.Fprintf(conn, request)
+	// fmt.Fprint(conn, request)
+	conn.Write([]byte(request))
 	message, err := bufio.NewReader(conn).ReadString('\n')
 	if err != nil {
 		return decimal.Decimal{}, err
