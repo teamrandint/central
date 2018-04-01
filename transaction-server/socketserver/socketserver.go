@@ -82,6 +82,10 @@ func (s SocketServer) getRoute(command string) (func(transNum int, args ...strin
 			if len(params) != 1 || len(params) != 2 {
 				return nil, nil
 			}
+		case "TRIGGER_SUCCESS":
+			if len(params) != 5 {
+				return nil, nil
+			}
 		default:
 			return nil, nil
 	}
