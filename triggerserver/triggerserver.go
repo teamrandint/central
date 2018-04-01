@@ -26,6 +26,7 @@ var successListener = make(chan trigger, 2048)
 
 func main() {
 	fmt.Println("Launching server...")
+	http.HandleFunc("/", healthHandler)
 	http.HandleFunc("/setTrigger", setTriggerHandler)
 	http.HandleFunc("/startTrigger", startTriggerHandler)
 	http.HandleFunc("/cancelTrigger", cancelTriggerHandler)
@@ -38,6 +39,10 @@ func main() {
 	if err := http.ListenAndServe(":"+os.Getenv("triggerport"), nil); err != nil {
 		panic(err)
 	}
+}
+
+func healthHandler(w http.ResponseWriter, r *http.Request) {
+	fmt.Println("Health")
 }
 
 func startTriggerHandler(w http.ResponseWriter, r *http.Request) {

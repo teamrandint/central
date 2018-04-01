@@ -11,6 +11,8 @@ services:
             - "transaction"
             - "database"
             - "audit"
+        environment:
+            - SERVICE_PORTS=${webport}
         env_file:
             - .env
         ports:
@@ -19,6 +21,8 @@ services:
           - overlay-network
     audit:
         image: teamrandint/auditserver
+        environment:
+            - SERVICE_PORTS=${auditport}
         env_file:
             - .env
         ports:
@@ -27,6 +31,9 @@ services:
           - overlay-network
     database:
         image: teamrandint/database
+        environment:
+            - SERVICE_PORTS=${dbport}
+            - TCP_PORTS=${dbport}
         env_file:
             - .env
         ports:
@@ -39,6 +46,9 @@ services:
             - "database"
             - "audit"
             - "quote"
+        environment:
+            - SERVICE_PORTS=${transport}
+            - TCP_PORTS=${transport}
         env_file:
             - .env
         ports:
@@ -51,6 +61,8 @@ services:
         image: teamrandint/quoteserver
         depends_on:
             - "audit"
+        environment:
+            - SERVICE_PORTS=${quoteport}
         env_file:
             - .env
         ports:
@@ -61,6 +73,8 @@ services:
         image: teamrandint/triggerserver
         depends_on:
             - "audit"
+        environment:
+            - SERVICE_PORTS=${triggerport}
         env_file:
             - .env
         ports:
@@ -71,9 +85,14 @@ services:
         image: dockercloud/haproxy
         depends_on:
           - web
+          - transaction
+          - audit
+          - trigger
+          - database
+          - quote
         environment:
           - BALANCE=leastconn
-          - OPTION=http-keep-alive
+          - OPTION=http-keep-alive,prefer-last-server,redispatch,dontlognull
           - MAXCONN=9999
           - EXTRA_ROUTE_SETTINGS=maxconn 999
         volumes:

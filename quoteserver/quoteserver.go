@@ -102,11 +102,16 @@ func quoteHandler(w http.ResponseWriter, r *http.Request) {
 	fmt.Fprintf(w, reply.StringFixed(2))
 }
 
+func healthHandler(w http.ResponseWriter, r *http.Request) {
+	fmt.Println("Health")
+}
+
 var quoteCache = cache.New(time.Minute, time.Minute)
 var re = regexp.MustCompile("(?P<quote>.+),(?P<stock>.+),(?P<user>.+),(?P<time>.+),(?P<key>.+)")
 var auditServer = logger.AuditLogger{Addr: "http://" + os.Getenv("auditaddr") + ":" + os.Getenv("auditport")}
 
 func main() {
+	http.HandleFunc("/", healthHandler)
 	http.HandleFunc("/quote", quoteHandler)
 	addr := os.Getenv("quoteaddr")
 	port := os.Getenv("quoteport")
