@@ -104,7 +104,7 @@ func main() {
 	addr := os.Getenv("quoteaddr")
 	port := os.Getenv("quoteport")
 	fmt.Printf("Quote server listening on %s:%s\n", addr, port)
-	if err := http.ListenAndServe(addr+":"+port, nil); err != nil {
+	if err := http.ListenAndServe(":"+port, nil); err != nil {
 		panic(err)
 	}
 }

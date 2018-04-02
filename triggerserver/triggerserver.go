@@ -112,7 +112,7 @@ func setTriggerHandler(w http.ResponseWriter, r *http.Request) {
 	triggersLock.Lock()
 	waitingTriggers[triggersKey{t.action, t.stockname, t.username}] = t
 	triggersLock.Unlock()
-	fmt.Println("Added but not started: ", t)
+	//fmt.Println("Added but not started: ", t)
 
 	w.WriteHeader(http.StatusOK)
 }
@@ -135,7 +135,7 @@ func cancelTriggerHandler(w http.ResponseWriter, r *http.Request) {
 		w.WriteHeader(http.StatusBadRequest)
 		return
 	}
-	fmt.Println("CANCELLED: ", cancelledTrigger)
+	//fmt.Println("CANCELLED: ", cancelledTrigger)
 	w.Write([]byte(cancelledTrigger.String()))
 }
 
@@ -150,13 +150,13 @@ func startSuccessListener() {
 
 func handleTriggerSuccess(trig trigger) {
 	go alertTriggerSuccess(trig)
-	fmt.Println("Closing successful trigger: ", trig)
+	//fmt.Println("Closing successful trigger: ", trig)
 
 	triggersLock.Lock()
 	delete(runningTriggers, triggersKey{trig.action, trig.stockname, trig.username})
 	triggersLock.Unlock()
 
-	fmt.Println("Trigger should be closed: ", trig)
+	//fmt.Println("Trigger should be closed: ", trig)
 
 }
 
@@ -176,7 +176,7 @@ func alertTriggerSuccess(t trigger) {
 		}
 	}
 
-	fmt.Println(strconv.Itoa(t.transNum) + ";" + t.getSuccessString())
+	//fmt.Println(strconv.Itoa(t.transNum) + ";" + t.getSuccessString())
 	_, err = fmt.Fprintf(conn, strconv.Itoa(t.transNum)+";"+t.getSuccessString())
 	if err != nil {
 		panic(err)

@@ -13,6 +13,7 @@ import (
 	"seng468/WebServer/UserSessions"
 	"seng468/WebServer/logger"
 	"seng468/WebServer/transmitter"
+	"strings"
 )
 
 type WebServer struct {
@@ -446,6 +447,8 @@ func (webServer *WebServer) displaySummaryHandler(writer http.ResponseWriter, re
 		http.Error(writer, "Invalid Request", 400)
 		return
 	}
+	lines := strings.Split(resp, ";")
+	fmt.Fprintln(writer, strings.Join(lines, "\n"))
 }
 
 func main() {
