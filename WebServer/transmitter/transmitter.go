@@ -53,7 +53,6 @@ func (trans *Transmitter) MakeRequest(transNum int, message string) string {
 
 	trans.connection = conn
 
-	// fmt.Fprint(trans.connection, message)
 	trans.connection.Write([]byte(message))
 	reply, _ := bufio.NewReader(trans.connection).ReadString('\n')
 	trans.connection.Close()
