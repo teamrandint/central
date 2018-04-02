@@ -16,6 +16,8 @@ import (
 )
 
 var transcount uint64
+var endpointTimes map[string][]time.Duration
+var endpointMutex sync.Mutex
 
 // go run WorkloadGen.go serverAddr:port workloadfile
 func main() {
@@ -27,6 +29,7 @@ func main() {
 	serverAddr := os.Args[1]
 	workloadFile := os.Args[2]
 	delayMs, _ := strconv.Atoi(os.Args[3])
+	endpointTimes = make(map[string][]time.Duration)
 
 	fmt.Printf("Testing %v on serverAddr %v with delay of %vms\n", workloadFile, serverAddr, delayMs)
 
@@ -65,8 +68,9 @@ func runRequests(serverAddr string, users map[string][]string, delay int) {
 
 				var resp *http.Response
 				var err error
-
+				var time0 time.Time
 				for {
+					time0 = time.Now()
 					resp, err = client.PostForm("http://"+serverAddr+"/"+endpoint+"/", values)
 					if err != nil {
 						fmt.Println("Post timed out -- retrying")
@@ -74,7 +78,12 @@ func runRequests(serverAddr string, users map[string][]string, delay int) {
 						break
 					}
 				}
+
 				resp.Body.Close()
+				responseTime := time.Since(time0)
+				endpointMutex.Lock()
+				endpointTimes[endpoint] = append(endpointTimes[endpoint], responseTime)
+				endpointMutex.Unlock()
 				atomic.AddUint64(&transcount, 1)
 			}
 
@@ -103,6 +112,9 @@ func runRequests(serverAddr string, users map[string][]string, delay int) {
 	if writeErr != nil {
 		panic(writeErr)
 	}
+
+	printEndpointStats()
+	saveEndpointStats()
 }
 
 func splitUsersFromFile(filename string) map[string][]string {
@@ -125,6 +137,8 @@ func splitUsersFromFile(filename string) map[string][]string {
 			//endpoint := matches[2]
 			user := matches[3]
 			outputCommands[user] = append(outputCommands[user], command)
+		} else {
+			fmt.Println("Error parsing command: ", line)
 		}
 	}
 
@@ -171,7 +185,38 @@ func countTPS() {
 		time.Sleep(time.Second)
 		tpsEnd = transcount
 
-		fmt.Printf("%d Running at %d TPS\n", elapsedtime, tpsEnd-tpsStart)
+		fmt.Printf("%d Running at %d TPS, %d trans\n", elapsedtime, tpsEnd-tpsStart, transcount)
 		elapsedtime++
+	}
+}
+
+func printEndpointStats() {
+	for endpoint := range endpointTimes {
+		responseTimes := endpointTimes[endpoint]
+		totalTime, _ := time.ParseDuration("0")
+		numCommands := float64(len(responseTimes))
+
+		for _, timeDur := range responseTimes {
+			totalTime += timeDur
+		}
+
+		// Some gross time type conversions
+		avgTimeFloat := totalTime.Seconds() / numCommands
+		avgTimeString := strconv.FormatFloat(avgTimeFloat, 'f', 6, 64)
+		avgTimeTime, _ := time.ParseDuration(avgTimeString + "s")
+
+		fmt.Printf("%v: %v\n", endpoint, avgTimeTime)
+	}
+}
+
+func saveEndpointStats() {
+	f, err := os.Create("./endpointStats.csv")
+	if err != nil {
+		panic(err)
+	}
+	defer f.Close()
+
+	for endpoint := range endpointTimes {
+		responseTimes := endpointTimes[endpoint]
 	}
 }
