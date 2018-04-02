@@ -199,6 +199,12 @@ function displaySuccess(data) {
 	// Handle dumplog
 	if (submitRequest.command.localeCompare('DUMPLOG') === 0) {
 		// DO something with the data
+		successMsg = "dumplog successful. Results: \n";
+		successMsg += data;
+	}
+
+	if (submitRequest.command.localeCompare('DISPLAY_SUMMARY') === 0) {
+		successMsg = "Display summary: \n" + data;
 	}
 
 	$('#resultsDiv').text(successMsg);
