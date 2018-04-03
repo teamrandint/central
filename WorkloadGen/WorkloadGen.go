@@ -238,11 +238,12 @@ func saveEndpointStats() {
 	}
 	defer f.Close()
 
+	f.Write([]byte("ENDPOINT,when,duration\n"))
 	for endpoint := range endpointTimes {
 		hits := endpointTimes[endpoint]
 
 		for _, hit := range hits {
-			outline := fmt.Sprintf("%v, %v, %v\n", endpoint, hit.when.UnixNano(), hit.duration.Nanoseconds())
+			outline := fmt.Sprintf("%v,%v,%v\n", endpoint, hit.when.UnixNano(), hit.duration.Nanoseconds())
 			f.Write([]byte(outline))
 		}
 	}
