@@ -15,6 +15,11 @@ import (
 	"time"
 )
 
+type outgoingRequest struct {
+	endpoint string
+	params   url.Values
+}
+
 type endpointHit struct {
 	duration time.Duration
 	when     time.Time
@@ -44,15 +49,18 @@ func main() {
 
 	runRequests(serverAddr, users, delayMs)
 	fmt.Printf("Done!\n")
+
+	printEndpointStats()
+	saveEndpointStats()
 }
 
-func runRequests(serverAddr string, users map[string][]string, delay int) {
+func runRequests(serverAddr string, users map[string][]outgoingRequest, delay int) {
 	var wg sync.WaitGroup
 	for userName, commands := range users {
 		fmt.Printf("Running user %v's commands...\n", userName)
 
 		wg.Add(1)
-		go func(commands []string) {
+		go func(commands []outgoingRequest) {
 			//timeout := time.Duration(15 * time.Second)
 			client := http.Client{
 			//	Timeout: timeout,
@@ -67,16 +75,15 @@ func runRequests(serverAddr string, users map[string][]string, delay int) {
 			}
 
 			for _, command := range commands {
-				endpoint, values := parseCommand(command)
 				time.Sleep(time.Duration(delay) * time.Millisecond) // ADJUST THIS TO CHANGE DELAY
-				// fmt.Println("http://"+serverAddr+"/"+endpoint+"/", values)
 
 				var resp *http.Response
 				var err error
 				var time0 time.Time
+
 				for {
 					time0 = time.Now()
-					resp, err = client.PostForm("http://"+serverAddr+"/"+endpoint+"/", values)
+					resp, err = client.PostForm("http://"+serverAddr+"/"+command.endpoint+"/", command.params)
 					if err != nil {
 						fmt.Println("Post timed out -- retrying")
 					} else {
@@ -92,7 +99,7 @@ func runRequests(serverAddr string, users map[string][]string, delay int) {
 					time0,
 				}
 				endpointMutex.Lock()
-				endpointTimes[endpoint] = append(endpointTimes[endpoint], hitEvent)
+				endpointTimes[command.endpoint] = append(endpointTimes[command.endpoint], hitEvent)
 				endpointMutex.Unlock()
 				atomic.AddUint64(&transcount, 1)
 			}
@@ -122,12 +129,9 @@ func runRequests(serverAddr string, users map[string][]string, delay int) {
 	if writeErr != nil {
 		panic(writeErr)
 	}
-
-	printEndpointStats()
-	saveEndpointStats()
 }
 
-func splitUsersFromFile(filename string) map[string][]string {
+func splitUsersFromFile(filename string) map[string][]outgoingRequest {
 	file, err := os.Open(filename)
 	if err != nil {
 		panic(err)
@@ -135,7 +139,7 @@ func splitUsersFromFile(filename string) map[string][]string {
 
 	// https://regex101.com/r/O6xaTp/3
 	re := regexp.MustCompile(`\[\d+\] ((?P<endpoint>\w+),(?P<user>\w+)(,-*\w*\.*\d*)*)`)
-	outputCommands := make(map[string][]string)
+	outputCommands := make(map[string][]outgoingRequest)
 
 	scanner := bufio.NewScanner(file)
 	for scanner.Scan() {
@@ -143,10 +147,11 @@ func splitUsersFromFile(filename string) map[string][]string {
 		matches := re.FindStringSubmatch(line)
 
 		if matches != nil {
-			command := matches[1]
+			commandString := matches[1]
+			parsedCommand := parseCommand(commandString)
 			//endpoint := matches[2]
 			user := matches[3]
-			outputCommands[user] = append(outputCommands[user], command)
+			outputCommands[user] = append(outputCommands[user], parsedCommand)
 		} else {
 			fmt.Println("Error parsing command: ", line)
 		}
@@ -156,9 +161,11 @@ func splitUsersFromFile(filename string) map[string][]string {
 }
 
 // Parse a single line command into the corresponding endpoint and values
-func parseCommand(cmd string) (endpoint string, v url.Values) {
+func parseCommand(cmd string) outgoingRequest {
 	subcmd := strings.Split(cmd, ",")
-	endpoint = subcmd[0]
+	endpoint := subcmd[0]
+	var v url.Values
+
 	// username, stock, amount, filename
 	switch endpoint {
 	case "ADD":
@@ -183,7 +190,11 @@ func parseCommand(cmd string) (endpoint string, v url.Values) {
 		}
 	}
 
-	return endpoint, v
+	out := outgoingRequest{
+		endpoint,
+		v,
+	}
+	return out
 }
 
 func countTPS() {
@@ -227,6 +238,6 @@ func saveEndpointStats() {
 	defer f.Close()
 
 	for endpoint := range endpointTimes {
-		_ = endpointTimes[endpoint]
+		f.Write([]byte(endpoint))
 	}
 }
