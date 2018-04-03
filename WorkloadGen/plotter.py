@@ -72,6 +72,7 @@ def getColorStroke(endpoint):
 df = pandas.read_csv('endpointStats.csv')
 df['duration'] /= 1000000 # nanoseconds to ms
 df['when'] -= df['when'].max() # relative times
+df['when'] /= 1e9 # nanos to s
 
 fig, ax = plt.subplots(sharex=True, sharey=True)
 
@@ -104,4 +105,6 @@ for endpoint in endpoints:
         prop={'size': 10},
     )
 
+plt.xlabel('Time to last request (s)')
+plt.ylabel('Rolling avg of response time (ms)')
 plt.show()
