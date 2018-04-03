@@ -10,7 +10,7 @@ function loginRequest() {
 	var userName = $('#userName').val();
 	$.ajax({
 		type: 'POST',
-		url: URL + "LOGIN/",
+		url: "LOGIN/",
 		data: {username: userName},
 		success: function(data, status){
 			setCookie("dayTradingUsername", $('#userName').val(), 10)
