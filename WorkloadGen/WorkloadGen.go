@@ -61,9 +61,9 @@ func runRequests(serverAddr string, users map[string][]outgoingRequest, delay in
 
 		wg.Add(1)
 		go func(commands []outgoingRequest) {
-			//timeout := time.Duration(15 * time.Second)
+			timeout := time.Duration(3 * time.Second)
 			client := http.Client{
-			//	Timeout: timeout,
+				Timeout: timeout,
 			}
 
 			// Issue login before executing any commands
@@ -75,14 +75,15 @@ func runRequests(serverAddr string, users map[string][]outgoingRequest, delay in
 			}
 
 			for _, command := range commands {
+				//fmt.Println("http://"+serverAddr+"/"+command.endpoint+"/", command.params)
+				//defer fmt.Println("http://"+serverAddr+"/"+command.endpoint+"/", command.params)
 				time.Sleep(time.Duration(delay) * time.Millisecond) // ADJUST THIS TO CHANGE DELAY
 
 				var resp *http.Response
 				var err error
-				var time0 time.Time
+				time0 := time.Now()
 
 				for {
-					time0 = time.Now()
 					resp, err = client.PostForm("http://"+serverAddr+"/"+command.endpoint+"/", command.params)
 					if err != nil {
 						fmt.Println("Post timed out -- retrying")
@@ -94,11 +95,11 @@ func runRequests(serverAddr string, users map[string][]outgoingRequest, delay in
 				resp.Body.Close()
 				responseTime := time.Since(time0)
 
+				endpointMutex.Lock()
 				hitEvent := endpointHit{
 					responseTime,
 					time0,
 				}
-				endpointMutex.Lock()
 				endpointTimes[command.endpoint] = append(endpointTimes[command.endpoint], hitEvent)
 				endpointMutex.Unlock()
 				atomic.AddUint64(&transcount, 1)
@@ -238,6 +239,11 @@ func saveEndpointStats() {
 	defer f.Close()
 
 	for endpoint := range endpointTimes {
-		f.Write([]byte(endpoint))
+		hits := endpointTimes[endpoint]
+
+		for _, hit := range hits {
+			outline := fmt.Sprintf("%v, %v, %v\n", endpoint, hit.when.UnixNano(), hit.duration.Nanoseconds())
+			f.Write([]byte(outline))
+		}
 	}
 }
