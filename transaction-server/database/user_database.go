@@ -366,8 +366,15 @@ func (u RedisDatabase) DbRequestWorker() {
 				u.MakeDbRequests(reqQue)
 				reqQue = nil
 				reqQue = []*Query{}
+				// Reset poll rate back to default
+				u.PollRate = 20
 			}
 		case <-time.After(u.PollRate * time.Millisecond):
+			// Incremental speed up of slow requests.
+			if u.PollRate > 0 {
+				u.PollRate = u.PollRate / 2;
+			}
+
 			u.MakeDbRequests(reqQue)
 			reqQue = nil
 			reqQue = []*Query{}

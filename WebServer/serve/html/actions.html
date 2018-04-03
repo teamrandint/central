@@ -1,0 +1,45 @@
+<!doctype html>
+<html>
+<head>
+  <meta charset="utf-8">
+  <title>Day Trading - Stock Exchange</title>
+  <link rel="stylesheet" href="stylesheets/main.css">
+  <script src="https://ajax.googleapis.com/ajax/libs/jquery/1.12.2/jquery.min.js"></script>
+</head>
+<body>
+<script type="module" src="js/FileSaver.js"></script>
+<script type="text/javascript" src="js/userActions.js"></script>
+<div id="navigation">
+  <h1>Day Trading</h1>
+  <h2>Choose a command </h2>
+  <div id="userNameDisplay">
+  User: <p id="usernameText"></p>
+  </div>
+  Commmand:
+  <select id="commands" onchange="commandChanged()">
+  	<option value="ADD">Add</option>
+  	<option value="QUOTE">Quote</option>
+  	<option value="BUY">Buy</option>
+  	<option value="COMMIT_BUY">Commit buy</option>
+  	<option value="CANCEL_BUY">Cancel buy</option>
+    <option value="SELL">Sell</option>
+    <option value="COMMIT_SELL">Commit sell</option>
+    <option value="CANCEL_SELL">Cancel sell</option>
+    <option value="SET_BUY_AMOUNT">Set buy amount</option>
+    <option value="CANCEL_SET_BUY">Cancel set buy</option>
+    <option value="SET_BUY_TRIGGER">Set buy trigger</option>
+    <option value="SET_SELL_AMOUNT">Set sell amount</option>
+    <option value="SET_SELL_TRIGGER">Set sell trigger</option>
+    <option value="CANCEL_SET_SELL">Cancel set sell</option>
+    <option value="DUMPLOG">Dumplog</option>
+    <option value="DISPLAY_SUMMARY">Display summary</option>
+  </select>
+</div>
+<div id="inputDiv" class="inputDiv">
+  <p id="inputOneTitle">Amount:</p><input type="number" id="textInputOne" value="">
+  <p id="inputTwoTitle"></p><input type="text" id="textInputTwo" value="">
+  <button id="submitButton">Submit</button>
+</div>
+<div id="resultsDiv"></div>
+</body>
+</html>
