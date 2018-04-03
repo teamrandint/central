@@ -10,6 +10,8 @@ import (
 	"github.com/shopspring/decimal"
 )
 
+var ErrNil = errors.New("redigo: nil returned")
+
 // UserDatabase holds all of the supported database commands
 type UserDatabase interface {
 	GetUserInfo(user string) (info string, err error)
@@ -104,7 +106,8 @@ func (u RedisDatabase) GetUserInfo(user string) (info string, err error) {
 		return "", err
 	}
 	c.Close()
-	userInfo, err := GetUserInfoFromReply(user, r); if err != nil {
+	userInfo, err := GetUserInfoFromReply(user, r)
+	if err != nil {
 		return "", err
 	}
 	return userInfo.getString(), nil
@@ -157,7 +160,10 @@ func (u RedisDatabase) pushOrder(transType string, user string,
 	resp := <-u.BatchResults
 
 	_, err := redis.Int64(resp.r, resp.err)
-	return err
+	if err != nil && err.Error() != ErrNil.Error() {
+		return err
+	}
+	return nil
 }
 
 func (u RedisDatabase) popOrder(transType string, user string) (stock string, cost decimal.Decimal, shares decimal.Decimal, err error) {
@@ -178,7 +184,9 @@ func (u RedisDatabase) popOrder(transType string, user string) (stock string, co
 	resp := <-u.BatchResults
 
 	recv, err := redis.String(resp.r, resp.err)
-
+	if err != nil && err.Error() == ErrNil.Error() {
+		err = nil
+	}
 	stock, cost, shares = decodeOrder(recv)
 	return stock, cost, shares, err
 }
@@ -270,6 +278,9 @@ func (u RedisDatabase) fundAction(action string, user string,
 	resp := <-u.BatchResults
 
 	r, err := redis.Float64(resp.r, resp.err)
+	if err != nil && err.Error() == ErrNil.Error() {
+		err = nil
+	}
 
 	return decimal.NewFromFloat(r), err
 }
@@ -339,12 +350,12 @@ func (u RedisDatabase) stockAction(action string, user string,
 	resp := <-u.BatchResults
 
 	r, err = redis.Float64(resp.r, resp.err)
-	if err != nil {
-		return decimal.Decimal{}, err
+	if err != nil && err.Error() == ErrNil.Error() {
+		err = nil
 	}
 
 	rDec := decimal.NewFromFloat(r)
-	return rDec, nil
+	return rDec, err
 }
 
 // DeleteKey deletes a key in the database
@@ -372,7 +383,7 @@ func (u RedisDatabase) DbRequestWorker() {
 		case <-time.After(u.PollRate * time.Millisecond):
 			// Incremental speed up of slow requests.
 			if u.PollRate > 0 {
-				u.PollRate = u.PollRate / 2;
+				u.PollRate = u.PollRate / 2
 			}
 
 			u.MakeDbRequests(reqQue)
