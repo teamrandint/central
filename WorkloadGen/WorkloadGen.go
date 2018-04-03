@@ -15,8 +15,13 @@ import (
 	"time"
 )
 
+type endpointHit struct {
+	duration time.Duration
+	when     time.Time
+}
+
 var transcount uint64
-var endpointTimes map[string][]time.Duration
+var endpointTimes map[string][]endpointHit
 var endpointMutex sync.Mutex
 
 // go run WorkloadGen.go serverAddr:port workloadfile
@@ -29,7 +34,7 @@ func main() {
 	serverAddr := os.Args[1]
 	workloadFile := os.Args[2]
 	delayMs, _ := strconv.Atoi(os.Args[3])
-	endpointTimes = make(map[string][]time.Duration)
+	endpointTimes = make(map[string][]endpointHit)
 
 	fmt.Printf("Testing %v on serverAddr %v with delay of %vms\n", workloadFile, serverAddr, delayMs)
 
@@ -81,8 +86,13 @@ func runRequests(serverAddr string, users map[string][]string, delay int) {
 
 				resp.Body.Close()
 				responseTime := time.Since(time0)
+
+				hitEvent := endpointHit{
+					responseTime,
+					time0,
+				}
 				endpointMutex.Lock()
-				endpointTimes[endpoint] = append(endpointTimes[endpoint], responseTime)
+				endpointTimes[endpoint] = append(endpointTimes[endpoint], hitEvent)
 				endpointMutex.Unlock()
 				atomic.AddUint64(&transcount, 1)
 			}
@@ -196,8 +206,8 @@ func printEndpointStats() {
 		totalTime, _ := time.ParseDuration("0")
 		numCommands := float64(len(responseTimes))
 
-		for _, timeDur := range responseTimes {
-			totalTime += timeDur
+		for _, event := range responseTimes {
+			totalTime += event.duration
 		}
 
 		// Some gross time type conversions
@@ -217,6 +227,6 @@ func saveEndpointStats() {
 	defer f.Close()
 
 	for endpoint := range endpointTimes {
-		responseTimes := endpointTimes[endpoint]
+		_ = endpointTimes[endpoint]
 	}
 }
