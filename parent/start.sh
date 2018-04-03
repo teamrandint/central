@@ -41,6 +41,3 @@ docker run -d -p ${triggerport}:${triggerport} \
 --net net \
 --ip ${triggeraddr} \
 teamrandint/triggerserver
-
-cd ../mock-legacy-quoteserve/
-./mock-legacy-quoteserve

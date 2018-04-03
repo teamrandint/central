@@ -60,7 +60,7 @@ func startTriggerHandler(w http.ResponseWriter, r *http.Request) {
 	}
 
 	// START LOCKING -- BE CAREFUL OF DEADLOCKS HERE
-	defer fmt.Println("Done starting")
+	//defer fmt.Println("Done starting")
 	triggersLock.Lock()
 	t, ok := waitingTriggers[triggersKey{action, stock, username}]
 
