@@ -60,53 +60,7 @@ func runRequests(serverAddr string, users map[string][]outgoingRequest, delay in
 		fmt.Printf("Running user %v's commands...\n", userName)
 
 		wg.Add(1)
-		go func(commands []outgoingRequest) {
-			timeout := time.Duration(3 * time.Second)
-			client := http.Client{
-				Timeout: timeout,
-			}
-
-			// Issue login before executing any commands
-			resp, err := client.PostForm("http://"+serverAddr+"/"+"LOGIN"+"/", url.Values{"username": {userName}})
-			if err != nil {
-				fmt.Println(err)
-			} else {
-				resp.Body.Close()
-			}
-
-			for _, command := range commands {
-				//fmt.Println("http://"+serverAddr+"/"+command.endpoint+"/", command.params)
-				//defer fmt.Println("http://"+serverAddr+"/"+command.endpoint+"/", command.params)
-				time.Sleep(time.Duration(delay) * time.Millisecond) // ADJUST THIS TO CHANGE DELAY
-
-				var resp *http.Response
-				var err error
-				time0 := time.Now()
-
-				for {
-					resp, err = client.PostForm("http://"+serverAddr+"/"+command.endpoint+"/", command.params)
-					if err != nil {
-						fmt.Println("Post timed out -- retrying")
-					} else {
-						break
-					}
-				}
-
-				resp.Body.Close()
-				responseTime := time.Since(time0)
-
-				endpointMutex.Lock()
-				hitEvent := endpointHit{
-					responseTime,
-					time0,
-				}
-				endpointTimes[command.endpoint] = append(endpointTimes[command.endpoint], hitEvent)
-				endpointMutex.Unlock()
-				atomic.AddUint64(&transcount, 1)
-			}
-
-			wg.Done()
-		}(commands)
+		go runUserRequests(serverAddr, delay, userName, commands, &wg)
 	}
 
 	// Wait for commands, then manually post the final dumplog
@@ -129,6 +83,52 @@ func runRequests(serverAddr string, users map[string][]outgoingRequest, delay in
 	_, writeErr := file.Write(data)
 	if writeErr != nil {
 		panic(writeErr)
+	}
+}
+
+func runUserRequests(serverAddr string, delay int, userName string, commands []outgoingRequest, wg *sync.WaitGroup) {
+	defer wg.Done()
+
+	timeout := time.Duration(3 * time.Second)
+	client := http.Client{
+		Timeout: timeout,
+	}
+
+	// Issue login before executing any commands
+	resp, err := client.PostForm("http://"+serverAddr+"/"+"LOGIN"+"/", url.Values{"username": {userName}})
+	if err != nil {
+		fmt.Println(err)
+	} else {
+		resp.Body.Close()
+	}
+
+	for _, command := range commands {
+		time.Sleep(time.Duration(delay) * time.Millisecond)
+
+		var resp *http.Response
+		var err error
+		time0 := time.Now()
+
+		for {
+			resp, err = client.PostForm("http://"+serverAddr+"/"+command.endpoint+"/", command.params)
+			if err != nil {
+				//fmt.Println("Post timed out -- retrying")
+			} else {
+				break
+			}
+		}
+
+		resp.Body.Close()
+		responseTime := time.Since(time0)
+
+		endpointMutex.Lock()
+		hitEvent := endpointHit{
+			responseTime,
+			time0,
+		}
+		endpointTimes[command.endpoint] = append(endpointTimes[command.endpoint], hitEvent)
+		endpointMutex.Unlock()
+		atomic.AddUint64(&transcount, 1)
 	}
 }
 
