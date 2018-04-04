@@ -329,7 +329,8 @@ func (u RedisDatabase) stockAction(action string, user string,
 	} else if action == "Get" {
 		command = "HGET"
 	} else if action == "Remove" {
-		command = "HDECRBY"
+		command = "HINCRBY"
+		amount = -amount
 	} else {
 		return 0, errors.New("Bad action attempt on stocks")
 	}

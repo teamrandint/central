@@ -33,8 +33,8 @@ func main() {
 	triggerURL := "http://" + os.Getenv("triggeraddr") + ":" + os.Getenv("triggerport")
 
 	server := socketserver.NewSocketServer(serverAddr)
-	database := database.RedisDatabase{Addr: databaseAddr, Port: databasePort, DbRequests: make(chan *database.Query, 1000),
-		BatchSize: 20, PollRate: 20, BatchResults: make(chan database.Response, 1000), DbPool: database.NewPool(databaseAddr, databasePort)}
+	database := database.RedisDatabase{Addr: databaseAddr, Port: databasePort, DbRequests: make(chan *database.Query, 10000),
+		BatchSize: 20, PollRate: 20, BatchResults: make(chan database.Response, 10000), DbPool: database.NewPool(databaseAddr, databasePort)}
 	logger := logger.AuditLogger{Addr: auditAddr}
 	triggerclient := triggerclient.TriggerClient{TriggerURL: triggerURL}
 
