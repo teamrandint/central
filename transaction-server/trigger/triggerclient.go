@@ -40,7 +40,7 @@ type TriggerClient struct {
 }
 
 // SetNewSellTrigger adds a new sell trigger to the triggerserver
-func (tc TriggerClient) SetNewSellTrigger(transNum int, username string, stock string, amount decimal.Decimal) error {
+func (tc TriggerClient) SetNewSellTrigger(transNum int, username string, stock string, amount int64) error {
 	trig := newSellTrigger(transNum, username, stock, amount)
 	return tc.setTrigger(transNum, trig)
 }
@@ -79,7 +79,7 @@ func (tc TriggerClient) CancelSellTrigger(transNum int, username string, stock s
 }
 
 // SetNewBuyTrigger adds a new sell trigger to the triggerserver
-func (tc TriggerClient) SetNewBuyTrigger(transNum int, username string, stock string, amount decimal.Decimal) error {
+func (tc TriggerClient) SetNewBuyTrigger(transNum int, username string, stock string, amount int64) error {
 	trig := newBuyTrigger(transNum, username, stock, amount)
 	return tc.setTrigger(transNum, trig)
 }
@@ -203,7 +203,7 @@ func (tc TriggerClient) parseTriggerFromString(trigStr string) Trigger {
 	if err != nil {
 		panic(err)
 	}
-	amount, err := decimal.NewFromString(matches[4])
+	amount, err := strconv.ParseInt(matches[4], 10, 64)
 	if err != nil {
 		panic(err)
 	}
