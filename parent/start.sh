@@ -48,5 +48,6 @@ docker run -d -p ${triggerport}:${triggerport} \
 --sysctl net.core.somaxconn=1024 \
 teamrandint/triggerserver
 
+## For testing with our legacy quote
 cd ../mock-legacy-quoteserve/
 ./mock-legacy-quoteserve
