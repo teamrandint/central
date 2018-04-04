@@ -260,8 +260,7 @@ func (u RedisDatabase) fundAction(action string, user string,
 	if action == "Add" {
 		command = "INCRBY"
 	} else if action == "Remove" {
-		command = "INCRBY"
-		amount = amount.Neg()
+		command = "DECRBY"
 	} else if action == "Get" {
 		command = "GET"
 	} else {
@@ -330,8 +329,7 @@ func (u RedisDatabase) stockAction(action string, user string,
 	} else if action == "Get" {
 		command = "HGET"
 	} else if action == "Remove" {
-		command = "HINCRBY"
-		amount = -amount
+		command = "HDECRBY"
 	} else {
 		return 0, errors.New("Bad action attempt on stocks")
 	}
