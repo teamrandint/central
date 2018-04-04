@@ -9,7 +9,7 @@ import (
 type Trigger struct {
 	username  string
 	stockname string
-	amount    int64
+	amount    decimal.Decimal
 	price     decimal.Decimal
 	action    string
 	transNum  int
@@ -20,7 +20,7 @@ func (t Trigger) getPriceStr() string {
 }
 
 func (t Trigger) getAmountStr() string {
-	return string(t.amount)
+	return t.amount.String()
 }
 
 func (t Trigger) String() string {
@@ -29,10 +29,10 @@ func (t Trigger) String() string {
 }
 
 func (t Trigger) GetCost() decimal.Decimal {
-	return t.price.Mul(decimal.NewFromFloat(float64(t.amount)))
+	return t.price.Mul(t.amount)
 }
 
-func (t Trigger) GetAmount() int64 {
+func (t Trigger) GetAmount() decimal.Decimal {
 	return t.amount
 }
 
@@ -40,7 +40,7 @@ func (t Trigger) GetPrice() decimal.Decimal {
 	return t.price
 }
 
-func newSellTrigger(transNum int, username string, stockname string, amount int64) Trigger {
+func newSellTrigger(transNum int, username string, stockname string, amount decimal.Decimal) Trigger {
 	t := Trigger{
 		transNum:  transNum,
 		username:  username,
@@ -52,7 +52,7 @@ func newSellTrigger(transNum int, username string, stockname string, amount int6
 	return t
 }
 
-func newBuyTrigger(transNum int, username string, stockname string, amount int64) Trigger {
+func newBuyTrigger(transNum int, username string, stockname string, amount decimal.Decimal) Trigger {
 	t := Trigger{
 		transNum:  transNum,
 		username:  username,

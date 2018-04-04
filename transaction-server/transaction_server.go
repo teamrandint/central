@@ -173,7 +173,7 @@ func (ts TransactionServer) CommitBuy(transNum int, params ...string) string {
 	err = ts.UserDatabase.AddStock(user, stock, shares)
 	if err != nil {
 		ts.reportError(transNum, "COMMIT_BUY", user, "Error connecting to database to add stock: "+err.Error(),
-			stock, nil, shares.String())
+			stock, nil, string(shares))
 		return "-1"
 	}
 	return "1"
@@ -228,7 +228,7 @@ func (ts TransactionServer) Sell(transNum int, params ...string) string {
 	}
 
 	curr, err := ts.UserDatabase.GetStock(user, stock)
-	if curr.LessThan(shares) {
+	if curr < shares {
 		ts.reportError(transNum, "SELL", user, "Cannot sell more stock than you own", stock,
 			nil, amount.String())
 		return "-1"
@@ -237,7 +237,7 @@ func (ts TransactionServer) Sell(transNum int, params ...string) string {
 	err = ts.UserDatabase.RemoveStock(user, stock, shares)
 	if err != nil {
 		ts.reportError(transNum, "SELL", user, "Error removing stock from database: "+err.Error(), stock, nil,
-			shares.String())
+			string(shares))
 		return "-1"
 	}
 
@@ -429,7 +429,7 @@ func (ts TransactionServer) SetBuyTrigger(transNum int, params ...string) string
 func (ts TransactionServer) SetSellAmount(transNum int, params ...string) string {
 	user := params[0]
 	stock := params[1]
-	amount, err := decimal.NewFromString(params[2])
+	amount, err := strconv.ParseInt(params[2], 10, 64)
 	if err != nil {
 		ts.reportError(transNum, "SET_SELL_AMOUNT", user, "Could not parse set sell amount to decimal",
 			stock, nil, nil)
@@ -439,20 +439,20 @@ func (ts TransactionServer) SetSellAmount(transNum int, params ...string) string
 	curr, err := ts.UserDatabase.GetStock(user, stock)
 	if err != nil {
 		ts.reportError(transNum, "SET_SELL_AMOUNT", user, "Could not get stock from database: "+err.Error(),
-			stock, nil, amount.String())
+			stock, nil, string(amount))
 		return "-1"
 	}
 
-	if amount.GreaterThan(curr) {
+	if amount > curr {
 		ts.reportError(transNum, "SET_SELL_AMOUNT", user, "Cannot set sell trigger for more stock than you own",
-			stock, nil, amount.String())
+			stock, nil, string(amount))
 		return "-1"
 	}
 
 	err = ts.TriggerClient.SetNewSellTrigger(transNum, user, stock, amount)
 	if err != nil {
 		ts.reportError(transNum, "SET_SELL_AMOUNT", user, "Failed to make new sell trigger: "+err.Error(),
-			stock, nil, amount.String())
+			stock, nil, string(amount))
 		return "-1"
 	}
 	return "1"
@@ -487,14 +487,14 @@ func (ts TransactionServer) SetSellTrigger(transNum int, params ...string) strin
 		return "-1"
 	}
 
-	err = ts.UserDatabase.RemoveStock(user, stock, trig.GetAmount())
+	err = ts.UserDatabase.RemoveStock(user, stock, trig.GetAmount().IntPart())
 	if err != nil {
 		ts.reportError(transNum, "SET_SELL_TRIGGER", user, "Could not remove stock from database: "+err.Error(),
 			stock, nil, price.String())
 		return "-1"
 	}
 
-	err = ts.UserDatabase.AddReserveStock(user, stock, trig.GetAmount())
+	err = ts.UserDatabase.AddReserveStock(user, stock, trig.GetAmount().IntPart())
 	if err != nil {
 		ts.reportError(transNum, "SET_SELL_TRIGGER", user, "Could not add stock to reserve: "+err.Error(),
 			stock, nil, price.String())
@@ -529,20 +529,20 @@ func (ts TransactionServer) CancelSetSell(transNum int, params ...string) string
 		return "-1"
 	}
 
-	if reserved.LessThan(trig.GetAmount()) {
+	if reserved < trig.GetAmount().IntPart() {
 		ts.reportError(transNum, "CANCEL_SET_SELL", user, "Should not have less that a trigger amount in your reserve account",
 			stock, nil, nil)
 		return "-1"
 	}
 
-	err = ts.UserDatabase.RemoveReserveStock(user, stock, trig.GetAmount())
+	err = ts.UserDatabase.RemoveReserveStock(user, stock, trig.GetAmount().IntPart())
 	if err != nil {
 		ts.reportError(transNum, "CANCEL_SET_SELL", user, "Error removing reserved stock from database: "+err.Error(),
 			stock, nil, nil)
 		return "-1"
 	}
 
-	err = ts.UserDatabase.AddStock(user, stock, trig.GetAmount())
+	err = ts.UserDatabase.AddStock(user, stock, trig.GetAmount().IntPart())
 	if err != nil {
 		ts.reportError(transNum, "CANCEL_SET_SELL", user, "Error adding stock to database: "+err.Error(),
 			stock, nil, nil)
@@ -564,7 +564,7 @@ func (ts TransactionServer) TriggerSuccess(transNum int, params ...string) strin
 	price := params[2]
 	amount := params[3]
 	action := params[4]
-	amountDec, err := strconv.ParseInt(amount, 10, 64)
+	amountDec, err := decimal.NewFromString(amount)
 	if err != nil {
 		return "-1"
 	}
@@ -591,39 +591,31 @@ func (ts TransactionServer) reportError(transNum int, command string, user strin
 	fmt.Println(errorMsg)
 }
 
-func (ts TransactionServer) sellExecute(user string, stock string, amount int64, price decimal.Decimal) error {
-	cost, shares, _ := ts.getMaxPurchase(user, stock, amount, price, nil)
+func (ts TransactionServer) sellExecute(user string, stock string, amount decimal.Decimal, price decimal.Decimal) error {
+	amountShares := amount.IntPart()
 
 	reserved, err := ts.UserDatabase.GetReserveStock(user, stock)
 	if err != nil {
 		return fmt.Errorf("error getting reserved stock from database:  %s", err.Error())
 	}
 
-	if reserved.LessThan(amount) {
+	if reserved < amountShares {
 		return errors.New("reserved stock is less than trigger amount")
 	}
 
-	err = ts.UserDatabase.RemoveReserveStock(user, stock, amount)
+	err = ts.UserDatabase.RemoveReserveStock(user, stock, amountShares)
 	if err != nil {
 		return fmt.Errorf("error removing reserved stock from database:  %s", err.Error())
 	}
 
-	// Price was higher than the sell trigger
-	if shares.GreaterThan(amount) {
-		err = ts.UserDatabase.AddStock(user, stock, amount.Sub(shares))
-		if err != nil {
-			return fmt.Errorf("error adding difference between stock cost and reserved:  %s", err.Error())
-		}
-	}
-
-	err = ts.UserDatabase.AddFunds(user, cost)
+	err = ts.UserDatabase.AddFunds(user, amount.Mul(price))
 	if err != nil {
 		return fmt.Errorf("error adding difference between stock cost and reserved:  %s", err.Error())
 	}
 	return nil
 }
 
-func (ts TransactionServer) buyExecute(user string, stock string, amount int64, price decimal.Decimal) error {
+func (ts TransactionServer) buyExecute(user string, stock string, amount decimal.Decimal, price decimal.Decimal) error {
 	cost, shares, _ := ts.getMaxPurchase(user, stock, amount, price, nil)
 
 	reserved, err := ts.UserDatabase.GetReserveFunds(user)
@@ -679,19 +671,22 @@ func (ts TransactionServer) DisplaySummary(transNum int, params ...string) strin
 }
 
 // Work with whole numbers for now
-func (ts TransactionServer) getMaxPurchase(user string, stock string, amount int64, stockPrice interface{},
+// Return the max money you can spend on N shares, given:
+// you are user with stock stock and balance balance
+func (ts TransactionServer) getMaxPurchase(user string, stock string, availableFunds decimal.Decimal, stockPrice interface{},
 	transNum interface{}) (decimal.Decimal, int64, error) {
+
 	var price decimal.Decimal
 	if stockPrice != nil {
 		price = stockPrice.(decimal.Decimal)
 	} else {
 		resp, err := quoteclient.Query(user, stock, transNum.(int))
 		if err != nil {
-			return decimal.Decimal{}, decimal.Decimal{}, err
+			return decimal.Decimal{}, 0, err
 		}
 		price = resp
 	}
-	shares := amount.Div(price).IntPart()
-	money := price.Mul(shares)
+	shares := availableFunds.Div(price).IntPart()
+	money := price.Mul(decimal.New(shares, 0))
 	return money.Round(2), shares, nil
 }

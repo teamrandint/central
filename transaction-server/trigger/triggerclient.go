@@ -1,6 +1,7 @@
 package triggerclient
 
 import (
+	"errors"
 	"io/ioutil"
 	"net/http"
 	"net/url"
@@ -41,7 +42,7 @@ type TriggerClient struct {
 
 // SetNewSellTrigger adds a new sell trigger to the triggerserver
 func (tc TriggerClient) SetNewSellTrigger(transNum int, username string, stock string, amount int64) error {
-	trig := newSellTrigger(transNum, username, stock, amount)
+	trig := newSellTrigger(transNum, username, stock, decimal.New(amount, 0))
 	return tc.setTrigger(transNum, trig)
 }
 
@@ -79,7 +80,7 @@ func (tc TriggerClient) CancelSellTrigger(transNum int, username string, stock s
 }
 
 // SetNewBuyTrigger adds a new sell trigger to the triggerserver
-func (tc TriggerClient) SetNewBuyTrigger(transNum int, username string, stock string, amount int64) error {
+func (tc TriggerClient) SetNewBuyTrigger(transNum int, username string, stock string, amount decimal.Decimal) error {
 	trig := newBuyTrigger(transNum, username, stock, amount)
 	return tc.setTrigger(transNum, trig)
 }
@@ -149,8 +150,7 @@ func (tc TriggerClient) startTrigger(transNum int, newTrigger Trigger) (Trigger,
 		return Trigger{}, err
 	}
 
-	trig := tc.getTriggerFromResponse(resp)
-	return trig, nil
+	return tc.getTriggerFromResponse(resp)
 }
 
 // CancelTrigger cancels a running trigger on the triggerserver.
@@ -169,8 +169,7 @@ func (tc TriggerClient) cancelTrigger(transNum int, cancel Trigger) (Trigger, er
 		return Trigger{}, err
 	}
 
-	trig := tc.getTriggerFromResponse(resp)
-	return trig, nil
+	return tc.getTriggerFromResponse(resp)
 }
 
 // ListRunningTriggers returns a list of all running triggers on the TriggerServer
@@ -182,7 +181,7 @@ func (tc TriggerClient) ListRunningTriggers() {
 	}
 }
 
-func (tc TriggerClient) getTriggerFromResponse(resp *http.Response) Trigger {
+func (tc TriggerClient) getTriggerFromResponse(resp *http.Response) (Trigger, error) {
 	bodyBytes, err := ioutil.ReadAll(resp.Body)
 	if err != nil {
 		panic(err)
@@ -192,18 +191,20 @@ func (tc TriggerClient) getTriggerFromResponse(resp *http.Response) Trigger {
 }
 
 // "{%v %v %v %v %v}", t.username, t.stockname, t.getPriceStr(), t.amount, t.action
-func (tc TriggerClient) parseTriggerFromString(trigStr string) Trigger {
+func (tc TriggerClient) parseTriggerFromString(trigStr string) (Trigger, error) {
 	re := regexp.MustCompile(`{(\w+) (\w+) (\d+.\d+) (\d+.\d+) (\w+)}`)
 	matches := re.FindStringSubmatch(trigStr)
 	if len(matches) != 6 {
-		return Trigger{}
+		// These errors are OK -- they happen when an nonexistent trigger is cancelled
+		// TODO: revise nonexistent trigger handling
+		return Trigger{}, errors.New("Can't parse trigger from string")
 	}
 
 	price, err := decimal.NewFromString(matches[3])
 	if err != nil {
 		panic(err)
 	}
-	amount, err := strconv.ParseInt(matches[4], 10, 64)
+	amount, err := decimal.NewFromString(matches[4])
 	if err != nil {
 		panic(err)
 	}
@@ -215,5 +216,5 @@ func (tc TriggerClient) parseTriggerFromString(trigStr string) Trigger {
 		amount:    amount,
 		action:    matches[5],
 	}
-	return trig
+	return trig, nil
 }
