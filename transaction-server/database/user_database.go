@@ -196,7 +196,7 @@ func (u RedisDatabase) popOrder(transType string, user string) (stock string, co
 // Returns a string following the format of:
 //		"stock:cost:shares"
 func encodeOrder(stock string, cost decimal.Decimal, shares int64) string {
-	return stock + ":" + cost.String() + ":" + string(shares)
+	return stock + ":" + cost.String() + ":" + strconv.FormatInt(shares, 10)
 }
 
 // Performs the opposite of encodeOrder
@@ -283,11 +283,7 @@ func (u RedisDatabase) fundAction(action string, user string,
 		err = nil
 	}
 
-	if action == "Get" {
-		return u.centsToDollar(r), nil
-	}
-
-	return decimal.Decimal{}, err
+	return u.centsToDollar(r), err
 }
 
 // GetStock returns the users available balance of said stock
