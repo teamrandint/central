@@ -82,7 +82,7 @@ func (ts TransactionServer) Add(transNum int, params ...string) string {
 
 	err = ts.UserDatabase.AddFunds(user, amount)
 	if err != nil {
-		ts.reportError(transNum, "ADD", user, "Failed to add amount to the database for user",
+		ts.reportError(transNum, "ADD", user, "Failed to add amount to the database for user: "+err.Error(),
 			nil, nil, amount.String())
 		return "-1"
 	}
@@ -139,13 +139,13 @@ func (ts TransactionServer) Buy(transNum int, params ...string) string {
 
 	err = ts.UserDatabase.RemoveFunds(user, cost)
 	if err != nil {
-		ts.reportError(transNum, "BUY", user, fmt.Sprintf("Error connecting to the database to remove funds: %s", err.Error()),
+		ts.reportError(transNum, "BUY", user, fmt.Sprintf("Error removing funds: %s", err.Error()),
 			stock, nil, amount.String())
 		return "-1"
 	}
 	err = ts.UserDatabase.PushBuy(user, stock, cost, shares)
 	if err != nil {
-		ts.reportError(transNum, "BUY", user, fmt.Sprintf("Error connecting to the database to push buy command: %s", err.Error()),
+		ts.reportError(transNum, "BUY", user, fmt.Sprintf("Error pushing buy command: %s", err.Error()),
 			stock, nil, amount.String())
 		return "-1"
 	}
@@ -165,7 +165,7 @@ func (ts TransactionServer) CommitBuy(transNum int, params ...string) string {
 	go ts.Logger.SystemEvent(ts.Name, transNum, "COMMIT_BUY", user, nil, nil, nil)
 	stock, _, shares, err := ts.UserDatabase.PopBuy(user)
 	if err != nil {
-		ts.reportError(transNum, "COMMIT_BUY", user, fmt.Sprintf("Error connecting to database to pop command: %s", err.Error()),
+		ts.reportError(transNum, "COMMIT_BUY", user, "Error popping command in commit buy: "+err.Error(),
 			stock, nil, nil)
 		return "-1"
 	}
@@ -187,7 +187,7 @@ func (ts TransactionServer) CancelBuy(transNum int, params ...string) string {
 	user := params[0]
 	stock, cost, _, err := ts.UserDatabase.PopBuy(user)
 	if err != nil {
-		ts.reportError(transNum, "CANCEL_BUY", user, "Error connecting to database to pop command: "+err.Error(),
+		ts.reportError(transNum, "CANCEL_BUY", user, "Error popping command in cancel buy: "+err.Error(),
 			nil, nil, nil)
 		return "-1"
 	}
