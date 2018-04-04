@@ -3,6 +3,11 @@ package main
 import (
 	"fmt"
 	"os"
+	"runtime"
+	"runtime/pprof"
+	"flag"
+	"log"
+	
 	"seng468/transaction-server/database"
 	"seng468/transaction-server/logger"
 	"seng468/transaction-server/quote"
@@ -12,6 +17,8 @@ import (
 	"github.com/shopspring/decimal"
 	"errors"
 )
+var cpuprofile = flag.String("cpuprofile", "", "write cpu profile to `file`")
+var memprofile = flag.String("memprofile", "", "write memory profile to `file`")
 
 // TransactionServer holds the main components of the module itself
 type TransactionServer struct {
@@ -24,6 +31,16 @@ type TransactionServer struct {
 }
 
 func main() {
+	flag.Parse()
+    if *cpuprofile != "" {
+        f, err := os.Create(*cpuprofile)
+        if err != nil {
+            log.Fatal(err)
+        }
+        pprof.StartCPUProfile(f)
+        defer pprof.StopCPUProfile()
+    }
+
 	serverAddr := ":" + os.Getenv("transport")
 	databaseAddr := "tcp"
 	databasePort := os.Getenv("dbaddr") + ":" + os.Getenv("dbport")
@@ -64,6 +81,17 @@ func main() {
 	server.Route("DISPLAY_SUMMARY,<user>", ts.DisplaySummary)
 	go ts.UserDatabase.DbRequestWorker()
 	server.Run()
+	if *memprofile != "" {
+        f, err := os.Create(*memprofile)
+        if err != nil {
+            log.Fatal("could not create memory profile: ", err)
+        }
+        runtime.GC() // get up-to-date statistics
+        if err := pprof.WriteHeapProfile(f); err != nil {
+            log.Fatal("could not write memory profile: ", err)
+        }
+        f.Close()
+    }
 }
 
 // Add the given amount of money to the user's account

@@ -9,6 +9,7 @@ import (
 	"seng468/auditserver/log"
 	"sync"
 	"time"
+	_ "net/http/pprof"
 )
 
 func userCommandHandler(w http.ResponseWriter, r *http.Request) {

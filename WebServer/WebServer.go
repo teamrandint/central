@@ -14,6 +14,7 @@ import (
 	"seng468/WebServer/logger"
 	"seng468/WebServer/transmitter"
 	"strings"
+	_ "net/http/pprof"
 )
 
 type WebServer struct {
@@ -484,5 +485,5 @@ func main() {
 	http.HandleFunc("/LOGIN/", webServer.loginHandler)
 
 	fmt.Printf("Successfully started server on %s\n", serverAddress)
-	panic(http.ListenAndServe(":"+os.Getenv("webport"), nil))
+	http.ListenAndServe(":"+os.Getenv("webport"), nil)
 }

@@ -9,18 +9,21 @@ docker run -d -p ${dbport}:${dbport} \
 --name database \
 --net net \
 --ip ${dbaddr} \
+--sysctl net.core.somaxconn=1024 \
 teamrandint/database 
 
 docker run -d -p ${auditport}:${auditport} \
 --name audit \
 --net net \
 --ip ${auditaddr} \
+--sysctl net.core.somaxconn=1024 \
 teamrandint/auditserver 
 
 docker run -d -p ${webport}:${webport} \
 --name web \
 --net net \
 --ip ${webaddr} \
+--sysctl net.core.somaxconn=1024 \
 teamrandint/webserver
 
 docker run -d -p ${quoteport}:${quoteport} \
@@ -28,18 +31,21 @@ docker run -d -p ${quoteport}:${quoteport} \
 --name quote \
 --net net \
 --ip ${quoteaddr} \
+--sysctl net.core.somaxconn=1024 \
 teamrandint/quoteserver
 
 docker run -d -p ${transport}:${transport} \
 --name trans \
 --net net \
 --ip ${transaddr} \
+--sysctl net.core.somaxconn=1024 \
 teamrandint/transactionserver
 
 docker run -d -p ${triggerport}:${triggerport} \
 --name trigger \
 --net net \
 --ip ${triggeraddr} \
+--sysctl net.core.somaxconn=1024 \
 teamrandint/triggerserver
 
 cd ../mock-legacy-quoteserve/

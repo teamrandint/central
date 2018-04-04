@@ -37,4 +37,4 @@ ENV triggerport=$triggerport
 WORKDIR /app
 COPY --from=build-env /go/src/seng468/transaction-server/transactionserve /app/
 EXPOSE 44455-44459
-ENTRYPOINT ./transactionserve 
+ENTRYPOINT ./transactionserve -cpuprofile=transcpu.prof
