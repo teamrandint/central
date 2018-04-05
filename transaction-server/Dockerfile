@@ -7,6 +7,7 @@ RUN apk add --no-cache git \
     && go get github.com/pkg/profile \
     && go get github.com/shopspring/decimal \
     && go get golang.org/x/sync/syncmap \
+    && go get github.com/pkg/profile \
     && cd /go/src/seng468/transaction-server \
     && go build -o transactionserve
 
@@ -37,4 +38,4 @@ ENV triggerport=$triggerport
 WORKDIR /app
 COPY --from=build-env /go/src/seng468/transaction-server/transactionserve /app/
 EXPOSE 44455-44459
-ENTRYPOINT ./transactionserve -cpuprofile=transcpu.prof
+ENTRYPOINT ./transactionserve

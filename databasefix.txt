@@ -9,5 +9,5 @@ sysctl -w net.core.somaxconn=65535
 
 
 ## For more open ports 
-sysctl net.ipv4.ip_local_port_range="15000 61000"
-sysctl net.ipv4.tcp_fin_timeout=30
+sudo sysctl net.ipv4.ip_local_port_range="15000 61000"
+sudo sysctl net.ipv4.tcp_fin_timeout=30

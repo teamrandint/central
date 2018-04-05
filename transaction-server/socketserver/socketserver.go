@@ -8,6 +8,8 @@ import (
 	"regexp"
 	"strconv"
 	"strings"
+	// "os/signal"
+	// "syscall"
 )
 
 type SocketServer struct {
@@ -60,7 +62,7 @@ func (s SocketServer) Run() {
 			fmt.Println("Error accepting: ", err.Error())
 			continue
 		}
-		go s.handleRequest(conn)
+		go s.handleRequest(conn)		
 	}
 }
 

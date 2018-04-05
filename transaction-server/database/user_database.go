@@ -377,7 +377,6 @@ func (u RedisDatabase) DbRequestWorker() {
 
 			u.MakeDbRequests(reqQue)
 			reqQue = nil
-			reqQue = []*Query{}
 		}
 	}
 }
