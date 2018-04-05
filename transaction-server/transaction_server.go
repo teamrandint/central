@@ -34,7 +34,7 @@ func main() {
 
 	server := socketserver.NewSocketServer(serverAddr)
 	database := database.RedisDatabase{Addr: databaseAddr, Port: databasePort, DbRequests: make(chan *database.Query, 10000),
-		BatchSize: 20, PollRate: 20, BatchResults: make(chan database.Response, 10000), DbPool: database.NewPool(databaseAddr, databasePort)}
+		BatchSize: 100, PollRate: 20, BatchResults: make(chan database.Response, 10000), DbPool: database.NewPool(databaseAddr, databasePort)}
 	logger := logger.AuditLogger{Addr: auditAddr}
 	triggerclient := triggerclient.TriggerClient{TriggerURL: triggerURL}
 
