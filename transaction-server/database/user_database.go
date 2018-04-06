@@ -2,7 +2,6 @@ package database
 
 import (
 	"errors"
-	"fmt"
 	"strings"
 	"time"
 
@@ -91,21 +90,24 @@ func (u RedisDatabase) GetUserInfo(user string) (info string, err error) {
 	c := u.getConn()
 	c.Send("MULTI")
 	c.Send("GET", user+":Balance")
-	c.Send("GET", user+":Stocks")
-	c.Send("GET", user+":SellOrders")
-	c.Send("GET", user+":BuyOrders")
-	c.Send("GET", user+":SellTriggers")
-	c.Send("GET", user+":BuyTriggers")
+	c.Send("HGETALL", user+":Stocks")
+	c.Send("LRANGE", user+":SellOrders", 0, 5)
+	c.Send("LRANGE", user+":BuyOrders", 0, 5)
+	// TODO triggers
+	///c.Send("GET", user+":SellTriggers")
+	//c.Send("GET", user+":BuyTriggers")
 	c.Send("GET", user+":BalanceReserve")
-	c.Send("GET", user+":StocksReserve")
-	c.Send("GET", user+":History")
+	c.Send("HGETALL", user+":StocksReserve")
+	// TODO history
 	r, err := c.Do("EXEC")
 	if err != nil {
 		return "", err
 	}
-
 	c.Close()
-	return fmt.Sprintf("%v", r), err
+	userInfo, err := GetUserInfoFromReply(user, r); if err != nil {
+		return "", err
+	}
+	return userInfo.getString(), nil
 }
 
 // PushSell adds a record of the users requested sell to their account
@@ -143,9 +145,14 @@ func (u RedisDatabase) pushOrder(transType string, user string,
 	query := new(Query)
 	query.Command = "RPUSH"
 	query.UserString = user + accountSuffix
-	query.Params = append(query.Params, u.encodeOrder(stock, cost, shares))
+	query.Params = append(query.Params, encodeOrder(stock, cost, shares))
 
 	u.DbRequests <- query
+
+	query = new(Query)
+	query.Command = "EXPIRE"
+	query.UserString = user + accountSuffix
+	query.Params = append(query.Params, 60)
 
 	resp := <-u.BatchResults
 
@@ -172,19 +179,19 @@ func (u RedisDatabase) popOrder(transType string, user string) (stock string, co
 
 	recv, err := redis.String(resp.r, resp.err)
 
-	stock, cost, shares = u.decodeOrder(recv)
+	stock, cost, shares = decodeOrder(recv)
 	return stock, cost, shares, err
 }
 
 // Encodes a buy or sell order into a string, to be pushed onto the pending orders stack
 // Returns a string following the format of:
 //		"stock:cost:shares"
-func (u RedisDatabase) encodeOrder(stock string, cost decimal.Decimal, shares decimal.Decimal) string {
+func encodeOrder(stock string, cost decimal.Decimal, shares decimal.Decimal) string {
 	return stock + ":" + cost.String() + ":" + shares.String()
 }
 
 // Performs the opposite of encodeOrder
-func (u RedisDatabase) decodeOrder(order string) (stock string, cost decimal.Decimal, shares decimal.Decimal) {
+func decodeOrder(order string) (stock string, cost decimal.Decimal, shares decimal.Decimal) {
 	split := strings.Split(order, ":")
 	if len(split) == 3 {
 		stock = split[0]
@@ -359,8 +366,15 @@ func (u RedisDatabase) DbRequestWorker() {
 				u.MakeDbRequests(reqQue)
 				reqQue = nil
 				reqQue = []*Query{}
+				// Reset poll rate back to default
+				u.PollRate = 20
 			}
 		case <-time.After(u.PollRate * time.Millisecond):
+			// Incremental speed up of slow requests.
+			if u.PollRate > 0 {
+				u.PollRate = u.PollRate / 2;
+			}
+
 			u.MakeDbRequests(reqQue)
 			reqQue = nil
 			reqQue = []*Query{}

@@ -15,7 +15,19 @@ import (
 	"time"
 )
 
+type outgoingRequest struct {
+	endpoint string
+	params   url.Values
+}
+
+type endpointHit struct {
+	duration time.Duration
+	when     time.Time
+}
+
 var transcount uint64
+var endpointTimes map[string][]endpointHit
+var endpointMutex sync.Mutex
 
 // go run WorkloadGen.go serverAddr:port workloadfile
 func main() {
@@ -27,6 +39,7 @@ func main() {
 	serverAddr := os.Args[1]
 	workloadFile := os.Args[2]
 	delayMs, _ := strconv.Atoi(os.Args[3])
+	endpointTimes = make(map[string][]endpointHit)
 
 	fmt.Printf("Testing %v on serverAddr %v with delay of %vms\n", workloadFile, serverAddr, delayMs)
 
@@ -36,50 +49,18 @@ func main() {
 
 	runRequests(serverAddr, users, delayMs)
 	fmt.Printf("Done!\n")
+
+	printEndpointStats()
+	saveEndpointStats()
 }
 
-func runRequests(serverAddr string, users map[string][]string, delay int) {
+func runRequests(serverAddr string, users map[string][]outgoingRequest, delay int) {
 	var wg sync.WaitGroup
 	for userName, commands := range users {
 		fmt.Printf("Running user %v's commands...\n", userName)
 
 		wg.Add(1)
-		go func(commands []string) {
-			//timeout := time.Duration(15 * time.Second)
-			client := http.Client{
-			//	Timeout: timeout,
-			}
-
-			// Issue login before executing any commands
-			resp, err := client.PostForm("http://"+serverAddr+"/"+"LOGIN"+"/", url.Values{"username": {userName}})
-			if err != nil {
-				fmt.Println(err)
-			} else {
-				resp.Body.Close()
-			}
-
-			for _, command := range commands {
-				endpoint, values := parseCommand(command)
-				time.Sleep(time.Duration(delay) * time.Millisecond) // ADJUST THIS TO CHANGE DELAY
-				// fmt.Println("http://"+serverAddr+"/"+endpoint+"/", values)
-
-				var resp *http.Response
-				var err error
-
-				for {
-					resp, err = client.PostForm("http://"+serverAddr+"/"+endpoint+"/", values)
-					if err != nil {
-						fmt.Println(err.Error())
-					} else {
-						break
-					}
-				}
-				resp.Body.Close()
-				atomic.AddUint64(&transcount, 1)
-			}
-
-			wg.Done()
-		}(commands)
+		go runUserRequests(serverAddr, delay, userName, commands, &wg)
 	}
 
 	// Wait for commands, then manually post the final dumplog
@@ -105,7 +86,53 @@ func runRequests(serverAddr string, users map[string][]string, delay int) {
 	}
 }
 
-func splitUsersFromFile(filename string) map[string][]string {
+func runUserRequests(serverAddr string, delay int, userName string, commands []outgoingRequest, wg *sync.WaitGroup) {
+	defer wg.Done()
+
+	timeout := time.Duration(3 * time.Second)
+	client := http.Client{
+		Timeout: timeout,
+	}
+
+	// Issue login before executing any commands
+	resp, err := client.PostForm("http://"+serverAddr+"/"+"LOGIN"+"/", url.Values{"username": {userName}})
+	if err != nil {
+		fmt.Println(err)
+	} else {
+		resp.Body.Close()
+	}
+
+	for _, command := range commands {
+		time.Sleep(time.Duration(delay) * time.Millisecond)
+
+		var resp *http.Response
+		var err error
+		time0 := time.Now()
+
+		for {
+			resp, err = client.PostForm("http://"+serverAddr+"/"+command.endpoint+"/", command.params)
+			if err != nil {
+				//fmt.Println("Post timed out -- retrying")
+			} else {
+				break
+			}
+		}
+
+		resp.Body.Close()
+		responseTime := time.Since(time0)
+
+		endpointMutex.Lock()
+		hitEvent := endpointHit{
+			responseTime,
+			time0,
+		}
+		endpointTimes[command.endpoint] = append(endpointTimes[command.endpoint], hitEvent)
+		endpointMutex.Unlock()
+		atomic.AddUint64(&transcount, 1)
+	}
+}
+
+func splitUsersFromFile(filename string) map[string][]outgoingRequest {
 	file, err := os.Open(filename)
 	if err != nil {
 		panic(err)
@@ -113,7 +140,7 @@ func splitUsersFromFile(filename string) map[string][]string {
 
 	// https://regex101.com/r/O6xaTp/3
 	re := regexp.MustCompile(`\[\d+\] ((?P<endpoint>\w+),(?P<user>\w+)(,-*\w*\.*\d*)*)`)
-	outputCommands := make(map[string][]string)
+	outputCommands := make(map[string][]outgoingRequest)
 
 	scanner := bufio.NewScanner(file)
 	for scanner.Scan() {
@@ -121,10 +148,13 @@ func splitUsersFromFile(filename string) map[string][]string {
 		matches := re.FindStringSubmatch(line)
 
 		if matches != nil {
-			command := matches[1]
+			commandString := matches[1]
+			parsedCommand := parseCommand(commandString)
 			//endpoint := matches[2]
 			user := matches[3]
-			outputCommands[user] = append(outputCommands[user], command)
+			outputCommands[user] = append(outputCommands[user], parsedCommand)
+		} else {
+			fmt.Println("Error parsing command: ", line)
 		}
 	}
 
@@ -132,9 +162,11 @@ func splitUsersFromFile(filename string) map[string][]string {
 }
 
 // Parse a single line command into the corresponding endpoint and values
-func parseCommand(cmd string) (endpoint string, v url.Values) {
+func parseCommand(cmd string) outgoingRequest {
 	subcmd := strings.Split(cmd, ",")
-	endpoint = subcmd[0]
+	endpoint := subcmd[0]
+	var v url.Values
+
 	// username, stock, amount, filename
 	switch endpoint {
 	case "ADD":
@@ -159,7 +191,11 @@ func parseCommand(cmd string) (endpoint string, v url.Values) {
 		}
 	}
 
-	return endpoint, v
+	out := outgoingRequest{
+		endpoint,
+		v,
+	}
+	return out
 }
 
 func countTPS() {
@@ -171,7 +207,44 @@ func countTPS() {
 		time.Sleep(time.Second)
 		tpsEnd = transcount
 
-		fmt.Printf("%d Running at %d TPS\n", elapsedtime, tpsEnd-tpsStart)
+		fmt.Printf("%d Running at %d TPS, %d trans\n", elapsedtime, tpsEnd-tpsStart, transcount)
 		elapsedtime++
+	}
+}
+
+func printEndpointStats() {
+	for endpoint := range endpointTimes {
+		responseTimes := endpointTimes[endpoint]
+		totalTime, _ := time.ParseDuration("0")
+		numCommands := float64(len(responseTimes))
+
+		for _, event := range responseTimes {
+			totalTime += event.duration
+		}
+
+		// Some gross time type conversions
+		avgTimeFloat := totalTime.Seconds() / numCommands
+		avgTimeString := strconv.FormatFloat(avgTimeFloat, 'f', 6, 64)
+		avgTimeTime, _ := time.ParseDuration(avgTimeString + "s")
+
+		fmt.Printf("%v: %v\n", endpoint, avgTimeTime)
+	}
+}
+
+func saveEndpointStats() {
+	f, err := os.Create("./endpointStats.csv")
+	if err != nil {
+		panic(err)
+	}
+	defer f.Close()
+
+	f.Write([]byte("ENDPOINT,when,duration\n"))
+	for endpoint := range endpointTimes {
+		hits := endpointTimes[endpoint]
+
+		for _, hit := range hits {
+			outline := fmt.Sprintf("%v,%v,%v\n", endpoint, hit.when.UnixNano(), hit.duration.Nanoseconds())
+			f.Write([]byte(outline))
+		}
 	}
 }

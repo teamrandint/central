@@ -67,7 +67,8 @@ func quote(user string, stock string, transNum int) (decimal.Decimal, error) {
 	}
 
 	request := fmt.Sprintf("%s,%s\n", stock, user)
-	fmt.Fprintf(conn, request)
+
+	conn.Write([]byte(request))
 	message, err := bufio.NewReader(conn).ReadString('\n')
 	if err != nil {
 		return decimal.Decimal{}, err

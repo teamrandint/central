@@ -26,5 +26,6 @@ ENV transport=$transport
 
 WORKDIR /app
 COPY --from=build-env /go/src/seng468/WebServer/webserve /app/
+COPY --from=build-env /go/src/seng468/WebServer/serve /app/
 EXPOSE 44455-44459
 ENTRYPOINT ./webserve
