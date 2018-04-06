@@ -79,7 +79,7 @@ services:
           - database
           - quote
         environment:
-          - BALANCE=leastconn
+          - BALANCE=url_param username
           - OPTION=http-keep-alive,prefer-last-server,redispatch,dontlognull
           - MAXCONN=9999
           - EXTRA_ROUTE_SETTINGS=maxconn 999
