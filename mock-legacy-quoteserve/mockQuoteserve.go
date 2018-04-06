@@ -65,6 +65,7 @@ func makeResponse(stock string, username string) string {
 		username,
 		now,
 		crypto)
+	fmt.Println(output)
 	return output
 }
 

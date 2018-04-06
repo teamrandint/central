@@ -151,15 +151,10 @@ func makeTimestamp() int64 {
 	return time.Now().UnixNano() / (int64(time.Millisecond) / int64(time.Nanosecond))
 }
 
-func healthHandler(w http.ResponseWriter, r *http.Request) {
-	fmt.Println("Health check")
-}
-
 var eventlog = log.Log{}
 var mutex sync.Mutex
 
 func main() {
-	http.HandleFunc("/", healthHandler)
 	http.HandleFunc("/userCommand", userCommandHandler)
 	http.HandleFunc("/quoteServer", quoteServerHandler)
 	http.HandleFunc("/accountTransaction", accountTransactionHandler)

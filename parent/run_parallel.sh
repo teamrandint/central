@@ -21,9 +21,7 @@ if [ $BUILD = true ] ; then
     ./create_images.sh
 fi
 
-docker swarm init
 docker network create -d overlay --attachable --subnet=172.20.0.0/16 --gateway=172.20.0.1 overlay-network
-docker network create -d overlay --attachable --subnet=172.19.0.0/16 --gateway=172.19.0.1 bridge-network
 
 if [ $MOCK = true ] ;
     then

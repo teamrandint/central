@@ -6,7 +6,6 @@ import (
 	"net"
 	"net/http"
 	"os"
-	"regexp"
 	"seng468/quoteserver/logger"
 	"strconv"
 	"time"
@@ -26,24 +25,23 @@ type QuoteReply struct {
 }
 
 func getReply(msg string) *QuoteReply {
-	n1 := re.SubexpNames()
-	r2 := re.FindAllStringSubmatch(msg, -1)
-	if r2 == nil {
+	params := strings.Split(msg, ",")
+	if len(params) > 5 {
 		return nil
 	}
-	res := map[string]string{}
-	for i, n := range r2[0] {
-		res[n1[i]] = n
-	}
 
-	quote, _ := decimal.NewFromString(res["quote"])
-	timestamp, _ := strconv.ParseUint(res["time"], 10, 64)
+	quote, err := decimal.NewFromString(params[0]);  if err  !=  nil {
+		return nil
+	}
+	timestamp, err := strconv.ParseUint(params[3], 10, 64); if err !=  nil {
+		return nil
+	}
 	return &QuoteReply{
 		quote: quote,
-		stock: res["stock"],
-		user:  res["user"],
+		stock: params[1],
+		user:  params[2],
 		time:  timestamp,
-		key:   res["key"],
+		key:   params[4],
 	}
 }
 
@@ -59,7 +57,7 @@ func quote(user string, stock string, transNum int) (decimal.Decimal, error) {
 	for {
 		conn, err = net.DialTimeout("tcp",
 			os.Getenv("legacyquoteaddr")+":"+os.Getenv("legacyquoteport"),
-			time.Second*5,
+			time.Second*1,
 		)
 		if err != nil { // trans server down? retry
 			fmt.Println(err.Error())
@@ -69,7 +67,6 @@ func quote(user string, stock string, transNum int) (decimal.Decimal, error) {
 	}
 
 	request := fmt.Sprintf("%s,%s\n", stock, user)
-	fmt.Println(request)
 	fmt.Fprintf(conn, request)
 	message, err := bufio.NewReader(conn).ReadString('\n')
 	if err != nil {
@@ -91,8 +88,6 @@ func quoteHandler(w http.ResponseWriter, r *http.Request) {
 	user := strings.TrimSpace(query.Get("user"))
 	stock := strings.TrimSpace(query.Get("stock"))
 	transNum, _ := strconv.Atoi(query.Get("transNum"))
-	fmt.Println(user)
-	fmt.Println(stock)
 	reply, err := quote(user, stock, transNum)
 	if err != nil {
 		w.WriteHeader(http.StatusBadRequest)
@@ -102,16 +97,10 @@ func quoteHandler(w http.ResponseWriter, r *http.Request) {
 	fmt.Fprintf(w, reply.StringFixed(2))
 }
 
-func healthHandler(w http.ResponseWriter, r *http.Request) {
-	fmt.Println("Health")
-}
-
 var quoteCache = cache.New(time.Minute, time.Minute)
-var re = regexp.MustCompile("(?P<quote>.+),(?P<stock>.+),(?P<user>.+),(?P<time>.+),(?P<key>.+)")
 var auditServer = logger.AuditLogger{Addr: "http://" + os.Getenv("auditaddr") + ":" + os.Getenv("auditport")}
 
 func main() {
-	http.HandleFunc("/", healthHandler)
 	http.HandleFunc("/quote", quoteHandler)
 	addr := os.Getenv("quoteaddr")
 	port := os.Getenv("quoteport")
