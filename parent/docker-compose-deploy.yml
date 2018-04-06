@@ -1,6 +1,6 @@
 version: '3'
 networks:
-      overlay-network:
+      randint-overlay:
         external: true
 services:
     web:
@@ -18,57 +18,69 @@ services:
         ports:
             - "${webport}:${webport}"
         networks:
-          - overlay-network
+          - randint-overlay
     audit:
         image: teamrandint/auditserver
+        environment:
+            - SERVICE_PORTS=${auditport}
         env_file:
             - .env
         ports:
             - "${auditport}:${auditport}"
         networks:
-          - overlay-network
+          - randint-overlay
     database:
         image: teamrandint/database
+        environment:
+            - SERVICE_PORTS=${dbport}
+            - TCP_PORTS=${dbport}
         env_file:
             - .env
         ports:
             - ${dbport}:${dbport}
         networks:
-          - overlay-network
+          - randint-overlay
     transaction:
         image: teamrandint/transactionserver
         depends_on:
             - "database"
             - "audit"
             - "quote"
+        environment:
+            - SERVICE_PORTS=${transport}
+            - TCP_PORTS=${transport}
         env_file:
             - .env
         ports:
             - ${transport}:${transport}
         networks:
-          - overlay-network
+          - randint-overlay
         deploy:
             replicas: ${num_trans}
     quote:
         image: teamrandint/quoteserver
         depends_on:
             - "audit"
+        environment:
+            - SERVICE_PORTS=${quoteport}
         env_file:
             - .env
         ports:
             - ${quoteport}:${quoteport}
         networks:
-          - overlay-network
+          - randint-overlay
     trigger:
         image: teamrandint/triggerserver
         depends_on:
             - "audit"
+        environment:
+            - SERVICE_PORTS=${triggerport}
         env_file:
             - .env
         ports:
             - ${triggerport}:${triggerport}
         networks:
-          - overlay-network
+          - randint-overlay
     proxy_web:
         image: dockercloud/haproxy
         depends_on:
@@ -89,7 +101,7 @@ services:
           - ${proxyport}:${proxyport}
           - "1936:1936"
         networks:
-          - overlay-network
+          - randint-overlay
         deploy:
           placement:
             constraints: [node.role == manager]
