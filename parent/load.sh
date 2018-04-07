@@ -1,7 +1,6 @@
 cat images.tar | docker load
 
 docker stack rm randint
-docker network rm randint-overlay
 
 docker tag teamrandint/triggerserver 192.168.1.150:5111/teamrandint/triggerserver
 docker push 192.168.1.150:5111/teamrandint/triggerserver
@@ -24,7 +23,7 @@ docker push 192.168.1.150:5111/teamrandint/auditserver
 docker tag teamrandint/haproxy 192.168.1.150:5111/teamrandint/haproxy
 docker push 192.168.1.150:5111/teamrandint/haproxy
 
-docker network create --driver overlay --attachable --subnet=172.27.0.0/16 --gateway=172.27.0.1 randint-overlay
+
 env $(cat .env | grep ^[A-Za-z_] | xargs) docker stack deploy -c docker-compose-deploy.yml randint
 
 sleep 3

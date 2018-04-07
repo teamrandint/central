@@ -59,8 +59,7 @@ docker image build \
 -t teamrandint/triggerserver .
 
 docker pull dockercloud/haproxy
-docker tag dockercloud/haproxy teamrandint/haproxy
 
 cd ../parent
-docker save teamrandint/triggerserver teamrandint/quoteserver teamrandint/transactionserver teamrandint/database teamrandint/webserver teamrandint/auditserver teamrandint/haproxy > images.tar
+docker save teamrandint/triggerserver teamrandint/quoteserver teamrandint/transactionserver teamrandint/database teamrandint/webserver teamrandint/auditserver dockercloud/haproxy > images.tar
 

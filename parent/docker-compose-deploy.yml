@@ -19,36 +19,46 @@ services:
             - "${webport}:${webport}"
         networks:
           - randint-overlay
+        deploy:
+          placement:
+            constraints: 
+                - node.hostname != b131.seng
+                - node.hostname != b132.seng
+                - node.hostname != b136.seng
     audit:
         image: teamrandint/auditserver
-        environment:
-            - SERVICE_PORTS=${auditport}
         env_file:
             - .env
         ports:
             - "${auditport}:${auditport}"
         networks:
           - randint-overlay
+        deploy:
+          placement:
+            constraints: 
+                - node.hostname != b131.seng
+                - node.hostname != b132.seng
+                - node.hostname != b136.seng
     database:
         image: teamrandint/database
-        environment:
-            - SERVICE_PORTS=${dbport}
-            - TCP_PORTS=${dbport}
         env_file:
             - .env
         ports:
             - ${dbport}:${dbport}
         networks:
           - randint-overlay
+        deploy:
+          placement:
+            constraints: 
+                - node.hostname != b131.seng
+                - node.hostname != b132.seng
+                - node.hostname != b136.seng
     transaction:
         image: teamrandint/transactionserver
         depends_on:
             - "database"
             - "audit"
             - "quote"
-        environment:
-            - SERVICE_PORTS=${transport}
-            - TCP_PORTS=${transport}
         env_file:
             - .env
         ports:
@@ -57,39 +67,47 @@ services:
           - randint-overlay
         deploy:
             replicas: ${num_trans}
+            placement:
+                constraints: 
+                    - node.hostname != b131.seng
+                    - node.hostname != b132.seng
+                    - node.hostname != b136.seng
     quote:
         image: teamrandint/quoteserver
         depends_on:
             - "audit"
-        environment:
-            - SERVICE_PORTS=${quoteport}
         env_file:
             - .env
         ports:
             - ${quoteport}:${quoteport}
         networks:
           - randint-overlay
+        deploy:
+          placement:
+            constraints: 
+                - node.hostname != b131.seng
+                - node.hostname != b132.seng
+                - node.hostname != b136.seng
     trigger:
         image: teamrandint/triggerserver
         depends_on:
             - "audit"
-        environment:
-            - SERVICE_PORTS=${triggerport}
         env_file:
             - .env
         ports:
             - ${triggerport}:${triggerport}
         networks:
           - randint-overlay
+        deploy:
+          placement:
+            constraints: 
+                - node.hostname != b131.seng
+                - node.hostname != b132.seng
+                - node.hostname != b136.seng
     proxy_web:
         image: dockercloud/haproxy
         depends_on:
           - web
-          - transaction
-          - audit
-          - trigger
-          - database
-          - quote
         environment:
           - BALANCE=url_param username
           - OPTION=http-keep-alive,prefer-last-server,redispatch,dontlognull
@@ -104,5 +122,8 @@ services:
           - randint-overlay
         deploy:
           placement:
-            constraints: [node.role == manager]
-
+            constraints: 
+                - node.role == manager
+                - node.hostname != b131.seng
+                - node.hostname != b132.seng
+                - node.hostname != b136.seng
