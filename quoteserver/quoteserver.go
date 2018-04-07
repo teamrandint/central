@@ -10,10 +10,11 @@ import (
 	"strconv"
 	"time"
 
+	"errors"
+	"strings"
+
 	"github.com/patrickmn/go-cache"
 	"github.com/shopspring/decimal"
-	"strings"
-	"errors"
 )
 
 type QuoteReply struct {
@@ -30,10 +31,12 @@ func getReply(msg string) *QuoteReply {
 		return nil
 	}
 
-	quote, err := decimal.NewFromString(params[0]);  if err  !=  nil {
+	quote, err := decimal.NewFromString(params[0])
+	if err != nil {
 		return nil
 	}
-	timestamp, err := strconv.ParseUint(params[3], 10, 64); if err !=  nil {
+	timestamp, err := strconv.ParseUint(params[3], 10, 64)
+	if err != nil {
 		return nil
 	}
 	return &QuoteReply{
@@ -106,7 +109,7 @@ func main() {
 	addr := os.Getenv("quoteaddr")
 	port := os.Getenv("quoteport")
 	fmt.Printf("Quote server listening on %s:%s\n", addr, port)
-	if err := http.ListenAndServe(addr+":"+port, nil); err != nil {
+	if err := http.ListenAndServe(":"+port, nil); err != nil {
 		panic(err)
 	}
 }

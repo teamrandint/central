@@ -164,7 +164,7 @@ func main() {
 	http.HandleFunc("/dumpLogRetrieve", dumpLogRetrieveHandler)
 
 	fmt.Printf("Audit server listening on %s:%s\n", os.Getenv("auditaddr"), os.Getenv("auditport"))
-	if err := http.ListenAndServe(os.Getenv("auditaddr")+":"+os.Getenv("auditport"), nil); err != nil {
+	if err := http.ListenAndServe(":"+os.Getenv("auditport"), nil); err != nil {
 		panic(err)
 	}
 }

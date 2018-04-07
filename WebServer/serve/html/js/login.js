@@ -1,4 +1,3 @@
-var URL = "http://172.20.0.5:44456/";
 var username = ""
 
 $(document).ready(function(){
@@ -15,7 +14,7 @@ function loginRequest() {
 		success: function(data, status){
 			setCookie("dayTradingUsername", $('#userName').val(), 10)
 			// Redirect user to actions page
-			window.location.replace("http://172.20.0.5:44456/actions.html");
+			window.location.replace("/actions.html");
 		},
 		error:function(){
 			alert("Error occured while logging in!")

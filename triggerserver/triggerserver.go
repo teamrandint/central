@@ -35,7 +35,7 @@ func main() {
 	go startSuccessListener()
 
 	fmt.Printf("Trigger server listening on %s:%s\n", os.Getenv("triggeraddr"), os.Getenv("triggerport"))
-	if err := http.ListenAndServe(os.Getenv("triggeraddr")+":"+os.Getenv("triggerport"), nil); err != nil {
+	if err := http.ListenAndServe(":"+os.Getenv("triggerport"), nil); err != nil {
 		panic(err)
 	}
 }
