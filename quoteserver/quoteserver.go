@@ -6,13 +6,14 @@ import (
 	"net"
 	"net/http"
 	"os"
-	"regexp"
 	"seng468/quoteserver/logger"
 	"strconv"
 	"time"
 
 	"github.com/patrickmn/go-cache"
 	"github.com/shopspring/decimal"
+	"strings"
+	"errors"
 )
 
 type QuoteReply struct {
@@ -24,22 +25,23 @@ type QuoteReply struct {
 }
 
 func getReply(msg string) *QuoteReply {
-	n1 := re.SubexpNames()
-	r2 := re.FindAllStringSubmatch(msg, -1)[0]
-
-	res := map[string]string{}
-	for i, n := range r2 {
-		res[n1[i]] = n
+	params := strings.Split(msg, ",")
+	if len(params) > 5 {
+		return nil
 	}
 
-	quote, _ := decimal.NewFromString(res["quote"])
-	timestamp, _ := strconv.ParseUint(res["time"], 10, 64)
+	quote, err := decimal.NewFromString(params[0]);  if err  !=  nil {
+		return nil
+	}
+	timestamp, err := strconv.ParseUint(params[3], 10, 64); if err !=  nil {
+		return nil
+	}
 	return &QuoteReply{
 		quote: quote,
-		stock: res["stock"],
-		user:  res["user"],
+		stock: params[1],
+		user:  params[2],
 		time:  timestamp,
-		key:   res["key"],
+		key:   params[4],
 	}
 }
 
@@ -55,10 +57,10 @@ func quote(user string, stock string, transNum int) (decimal.Decimal, error) {
 	for {
 		conn, err = net.DialTimeout("tcp",
 			os.Getenv("legacyquoteaddr")+":"+os.Getenv("legacyquoteport"),
-			time.Second*5,
+			time.Second*1,
 		)
 		if err != nil { // trans server down? retry
-			fmt.Println("Legacy server timedout -- retrying")
+			fmt.Println(err.Error())
 		} else {
 			break
 		}
@@ -73,6 +75,9 @@ func quote(user string, stock string, transNum int) (decimal.Decimal, error) {
 	}
 	defer conn.Close()
 	reply := getReply(message)
+	if reply == nil {
+		return decimal.Decimal{}, errors.New("reply from quoteserve doesn't match regex")
+	}
 	go auditServer.QuoteServer("quoteserver", transNum, reply.quote.String(), reply.stock,
 		reply.user, reply.time, reply.key)
 	quoteCache.Set(reply.stock, reply.quote.String(), cache.DefaultExpiration)
@@ -81,8 +86,8 @@ func quote(user string, stock string, transNum int) (decimal.Decimal, error) {
 
 func quoteHandler(w http.ResponseWriter, r *http.Request) {
 	query := r.URL.Query()
-	user := query.Get("user")
-	stock := query.Get("stock")
+	user := strings.TrimSpace(query.Get("user"))
+	stock := strings.TrimSpace(query.Get("stock"))
 	transNum, _ := strconv.Atoi(query.Get("transNum"))
 	reply, err := quote(user, stock, transNum)
 	if err != nil {
@@ -94,7 +99,6 @@ func quoteHandler(w http.ResponseWriter, r *http.Request) {
 }
 
 var quoteCache = cache.New(time.Minute, time.Minute)
-var re = regexp.MustCompile("(?P<quote>.+),(?P<stock>.+),(?P<user>.+),(?P<time>.+),(?P<key>.+)")
 var auditServer = logger.AuditLogger{Addr: "http://" + os.Getenv("auditaddr") + ":" + os.Getenv("auditport")}
 
 func main() {

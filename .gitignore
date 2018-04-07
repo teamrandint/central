@@ -2,3 +2,5 @@ parent/images.tar
 images.tar
 .vscode
 endpointStats*
+.idea
+output.xml

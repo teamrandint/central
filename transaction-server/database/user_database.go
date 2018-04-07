@@ -153,13 +153,6 @@ func (u RedisDatabase) pushOrder(transType string, user string,
 	u.DbRequests <- query
 	resp := <-u.BatchResults
 
-	query = new(Query)
-	query.Command = "EXPIRE"
-	query.UserString = user + accountSuffix
-	query.Params = append(query.Params, 60)
-	u.DbRequests <- query
-	_ = <-u.BatchResults
-
 	_, err := redis.Int64(resp.r, resp.err)
 	if err != nil && err.Error() != ErrNil.Error() {
 		return err
