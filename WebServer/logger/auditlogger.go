@@ -161,8 +161,8 @@ func (al AuditLogger) SendLog(slash string, params map[string]string) {
 	transport := &http.Transport{
 		Proxy: http.ProxyFromEnvironment,
 		Dial: (&net.Dialer{
-			Timeout:   0,
-			KeepAlive: 0,
+			Timeout:   time.Second * 3,
+			KeepAlive: time.Second * 15,
 		}).Dial,
 		TLSHandshakeTimeout: 10 * time.Second,
 	}
@@ -172,7 +172,7 @@ func (al AuditLogger) SendLog(slash string, params map[string]string) {
 		resp, err = client.Do(req)
 
 		if err != nil { // trans server down? retry
-			fmt.Println("Audit timedout -- retrying")
+			fmt.Println(err.Error())
 		} else {
 			break
 		}
