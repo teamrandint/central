@@ -484,5 +484,5 @@ func main() {
 	http.HandleFunc("/LOGIN/", webServer.loginHandler)
 
 	fmt.Printf("Successfully started server on %s\n", serverAddress)
-	panic(http.ListenAndServe(":"+os.Getenv("webport"), nil))
+	panic(http.ListenAndServe(os.Getenv("webaddr")+":"+os.Getenv("webport"), nil))
 }

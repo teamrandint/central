@@ -2,6 +2,7 @@ package database
 
 import (
 	"errors"
+	"strconv"
 	"strings"
 	"time"
 
@@ -9,6 +10,8 @@ import (
 
 	"github.com/shopspring/decimal"
 )
+
+var ErrNil = errors.New("redigo: nil returned")
 
 // UserDatabase holds all of the supported database commands
 type UserDatabase interface {
@@ -104,35 +107,36 @@ func (u RedisDatabase) GetUserInfo(user string) (info string, err error) {
 		return "", err
 	}
 	c.Close()
-	userInfo, err := GetUserInfoFromReply(user, r); if err != nil {
+	userInfo, err := GetUserInfoFromReply(user, r)
+	if err != nil {
 		return "", err
 	}
 	return userInfo.getString(), nil
 }
 
 // PushSell adds a record of the users requested sell to their account
-func (u RedisDatabase) PushSell(user string, stock string, cost decimal.Decimal, shares decimal.Decimal) error {
+func (u RedisDatabase) PushSell(user string, stock string, cost decimal.Decimal, shares int64) error {
 	return u.pushOrder("Sell", user, stock, cost, shares)
 }
 
 // PopSell removes a users most recent requested sell
-func (u RedisDatabase) PopSell(user string) (stock string, cost decimal.Decimal, shares decimal.Decimal, err error) {
+func (u RedisDatabase) PopSell(user string) (stock string, cost decimal.Decimal, shares int64, err error) {
 	return u.popOrder("Sell", user)
 }
 
 // PushBuy adds a record of the users requested buy to their account
-func (u RedisDatabase) PushBuy(user string, stock string, cost decimal.Decimal, shares decimal.Decimal) error {
+func (u RedisDatabase) PushBuy(user string, stock string, cost decimal.Decimal, shares int64) error {
 	// Expires in 60s
 	return u.pushOrder("Buy", user, stock, cost, shares)
 }
 
 // PopBuy removes a users most recent requested buy
-func (u RedisDatabase) PopBuy(user string) (stock string, cost decimal.Decimal, shares decimal.Decimal, err error) {
+func (u RedisDatabase) PopBuy(user string) (stock string, cost decimal.Decimal, shares int64, err error) {
 	return u.popOrder("Buy", user)
 }
 
 func (u RedisDatabase) pushOrder(transType string, user string,
-	stock string, cost decimal.Decimal, shares decimal.Decimal) error {
+	stock string, cost decimal.Decimal, shares int64) error {
 	accountSuffix := ""
 	if transType == "Buy" {
 		accountSuffix = ":BuyOrders"
@@ -146,16 +150,17 @@ func (u RedisDatabase) pushOrder(transType string, user string,
 	query.Command = "RPUSH"
 	query.UserString = user + accountSuffix
 	query.Params = append(query.Params, encodeOrder(stock, cost, shares))
-
 	u.DbRequests <- query
-
 	resp := <-u.BatchResults
 
 	_, err := redis.Int64(resp.r, resp.err)
-	return err
+	if err != nil && err.Error() != ErrNil.Error() {
+		return err
+	}
+	return nil
 }
 
-func (u RedisDatabase) popOrder(transType string, user string) (stock string, cost decimal.Decimal, shares decimal.Decimal, err error) {
+func (u RedisDatabase) popOrder(transType string, user string) (stock string, cost decimal.Decimal, shares int64, err error) {
 	accountSuffix := ""
 	if transType == "Buy" {
 		accountSuffix = ":BuyOrders"
@@ -173,7 +178,9 @@ func (u RedisDatabase) popOrder(transType string, user string) (stock string, co
 	resp := <-u.BatchResults
 
 	recv, err := redis.String(resp.r, resp.err)
-
+	if err != nil && err.Error() == ErrNil.Error() {
+		err = nil
+	}
 	stock, cost, shares = decodeOrder(recv)
 	return stock, cost, shares, err
 }
@@ -181,21 +188,21 @@ func (u RedisDatabase) popOrder(transType string, user string) (stock string, co
 // Encodes a buy or sell order into a string, to be pushed onto the pending orders stack
 // Returns a string following the format of:
 //		"stock:cost:shares"
-func encodeOrder(stock string, cost decimal.Decimal, shares decimal.Decimal) string {
-	return stock + ":" + cost.String() + ":" + shares.String()
+func encodeOrder(stock string, cost decimal.Decimal, shares int64) string {
+	return stock + ":" + cost.String() + ":" + strconv.FormatInt(shares, 10)
 }
 
 // Performs the opposite of encodeOrder
-func decodeOrder(order string) (stock string, cost decimal.Decimal, shares decimal.Decimal) {
+func decodeOrder(order string) (stock string, cost decimal.Decimal, shares int64) {
 	split := strings.Split(order, ":")
 	if len(split) == 3 {
 		stock = split[0]
 		cost, _ = decimal.NewFromString(split[1])
-		shares, _ = decimal.NewFromString(split[2])
+		shares, _ = strconv.ParseInt(split[2], 10, 64)
 	} else {
 		stock = ""
 		cost, _ = decimal.NewFromString("0")
-		shares, _ = decimal.NewFromString("0")
+		shares = 0
 	}
 
 	return stock, cost, shares
@@ -235,88 +242,90 @@ func (u RedisDatabase) GetReserveFunds(user string) (decimal.Decimal, error) {
 // RemoveReserveFunds removes n funds from a users account
 // Pass in the absoloute value of funds to be removed.
 func (u RedisDatabase) RemoveReserveFunds(user string, amount decimal.Decimal) error {
-	_, err := u.fundAction("Add", user, ":BalanceReserve", amount)
+	_, err := u.fundAction("Remove", user, ":BalanceReserve", amount)
 	return err
 }
 
-// stockAction handles the generic stock commands
+// fundAction handles the generic fund commands
 func (u RedisDatabase) fundAction(action string, user string,
 	accountSuffix string, amount decimal.Decimal) (decimal.Decimal, error) {
 	command := ""
 	if action == "Add" {
-		command = "INCRBYFLOAT"
+		command = "INCRBY"
+	} else if action == "Remove" {
+		command = "DECRBY"
 	} else if action == "Get" {
 		command = "GET"
-	} else if action == "Remove" {
-		command = "INCRBYFLOAT"
-		amount = amount.Neg()
 	} else {
-		return decimal.NewFromFloat(0.0), errors.New("Bad action attempt on funds")
+		return decimal.Decimal{}, errors.New("Bad action attempt on funds")
 	}
 
 	query := new(Query)
 	query.Command = command
 	query.UserString = user + accountSuffix
 	if action != "Get" {
-		query.Params = append(query.Params, amount)
+		query.Params = append(query.Params, u.dollarToCents(amount))
 	}
 
 	u.DbRequests <- query
 	resp := <-u.BatchResults
 
-	r, err := redis.Float64(resp.r, resp.err)
+	r, err := redis.Int64(resp.r, resp.err)
+	if err != nil && err.Error() == ErrNil.Error() {
+		err = nil
+	}
 
-	return decimal.NewFromFloat(r), err
+	return u.centsToDollar(r), err
 }
 
 // GetStock returns the users available balance of said stock
-func (u RedisDatabase) GetStock(user string, stock string) (decimal.Decimal, error) {
-	return u.stockAction("Get", user, ":Stocks", stock, decimal.NewFromFloat(0.0))
+func (u RedisDatabase) GetStock(user string, stock string) (int64, error) {
+	return u.stockAction("Get", user, ":Stocks", stock, 0)
 }
 
 // RemoveStock removes int stocks from the users account
 // Send the absolute value of the stock being removed
-func (u RedisDatabase) RemoveStock(user string, stock string, amount decimal.Decimal) error {
-	_, err := u.stockAction("Remove", user, ":Stocks", stock, amount)
+func (u RedisDatabase) RemoveStock(user string, stock string, shares int64) error {
+	_, err := u.stockAction("Remove", user, ":Stocks", stock, shares)
 	return err
 }
 
 // AddStock adds shares to the user account
-func (u RedisDatabase) AddStock(user string, stock string, shares decimal.Decimal) error {
+func (u RedisDatabase) AddStock(user string, stock string, shares int64) error {
 	_, err := u.stockAction("Add", user, ":Stocks", stock, shares)
 	return err
 }
 
 // AddReserveStock adds n shares of stock to a user's account
-func (u RedisDatabase) AddReserveStock(user string, stock string, amount decimal.Decimal) error {
-	_, err := u.stockAction("Add", user, ":StocksReserve", stock, amount)
+func (u RedisDatabase) AddReserveStock(user string, stock string, shares int64) error {
+	_, err := u.stockAction("Add", user, ":StocksReserve", stock, shares)
 	return err
 }
 
 // GetReserveStock returns the amount of shares present in a user's reserve account
-func (u RedisDatabase) GetReserveStock(user string, stock string) (decimal.Decimal, error) {
-	return u.stockAction("Get", user, ":StocksReserve", stock, decimal.NewFromFloat(0.0))
+func (u RedisDatabase) GetReserveStock(user string, stock string) (int64, error) {
+	return u.stockAction("Get", user, ":StocksReserve", stock, 0)
 }
 
 // RemoveReserveStock removes n shares of stock from a user's reserve account
-func (u RedisDatabase) RemoveReserveStock(user string, stock string, amount decimal.Decimal) error {
-	_, err := u.stockAction("Remove", user, ":StocksReserve", stock, amount)
+func (u RedisDatabase) RemoveReserveStock(user string, stock string, shares int64) error {
+	_, err := u.stockAction("Remove", user, ":StocksReserve", stock, shares)
 	return err
 }
 
 // stockAction handles the generic stock commands
 func (u RedisDatabase) stockAction(action string, user string,
-	accountSuffix string, stock string, amount decimal.Decimal) (decimal.Decimal, error) {
+	accountSuffix string, stock string, amount int64) (int64, error) {
 	command := ""
 	if action == "Add" {
-		command = "HINCRBYFLOAT"
+		command = "HINCRBY"
 	} else if action == "Get" {
 		command = "HGET"
 	} else if action == "Remove" {
-		command = "HINCRBYFLOAT"
-		amount = amount.Neg()
+		command = "HINCRBY"
+		amount = -amount
 	} else {
-		return decimal.NewFromFloat(0.0), errors.New("Bad action attempt on stocks")
+		return 0, errors.New("Bad action attempt on stocks")
 	}
 
 	query := new(Query)
@@ -329,17 +338,19 @@ func (u RedisDatabase) stockAction(action string, user string,
 
 	u.DbRequests <- query
 
-	var r float64
+	var r int64
 	var err error
 	resp := <-u.BatchResults
 
-	r, err = redis.Float64(resp.r, resp.err)
-	if err != nil {
-		return decimal.Decimal{}, err
+	if action == "Get" {
+		r, err = redis.Int64(resp.r, resp.err)
+		if err != nil && err.Error() == ErrNil.Error() {
+			err = nil
+		}
+		return r, nil
 	}
 
-	rDec := decimal.NewFromFloat(r)
-	return rDec, nil
+	return 0, nil
 }
 
 // DeleteKey deletes a key in the database
@@ -367,7 +378,7 @@ func (u RedisDatabase) DbRequestWorker() {
 		case <-time.After(u.PollRate * time.Millisecond):
 			// Incremental speed up of slow requests.
 			if u.PollRate > 0 {
-				u.PollRate = u.PollRate / 2;
+				u.PollRate = u.PollRate / 2
 			}
 
 			u.MakeDbRequests(reqQue)
@@ -402,4 +413,12 @@ func (u RedisDatabase) MakeDbRequests(requestQue []*Query) {
 		// Notify waiting processes of batch execution
 		u.BatchResults <- resp
 	}
+}
+
+func (u RedisDatabase) dollarToCents(in decimal.Decimal) int64 {
+	return in.Shift(2).IntPart()
+}
+
+func (u RedisDatabase) centsToDollar(in int64) decimal.Decimal {
+	return decimal.New(in, -2)
 }
