@@ -11,6 +11,7 @@ import (
 	"os"
 	"strconv"
 	"time"
+	"github.com/fatih/pool"
 )
 
 type Transmitters interface {
@@ -21,12 +22,16 @@ type Transmitter struct {
 	address    string
 	port       string
 	connection net.Conn
+	connectionPool pool.Pool
 }
 
 func NewTransmitter(addr string, prt string) *Transmitter {
 	transmitter := new(Transmitter)
 	transmitter.address = addr
 	transmitter.port = prt
+	factory := func() (net.Conn, error) { return net.Dial("tcp", trans.address+":"+trans.port) }
+
+	transmitter.connectionPool.NewChannelPool(5, 30, factory)
 
 	return transmitter
 }

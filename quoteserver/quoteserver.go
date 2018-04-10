@@ -13,6 +13,7 @@ import (
 
 	"github.com/patrickmn/go-cache"
 	"github.com/shopspring/decimal"
+	_ "net/http/pprof"
 )
 
 type QuoteReply struct {

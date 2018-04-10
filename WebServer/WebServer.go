@@ -143,6 +143,13 @@ func (webServer *WebServer) commitBuyHandler(writer http.ResponseWriter, request
 		webServer.logger.SystemError(webServer.Name, currTransNum, "COMMIT_BUY",
 			username, nil, nil, nil, "Time elapsed on most recent buy request")
 		http.Error(writer, "Time elapsed on most recent buy request", 400)
+		if (len(userSession.PendingBuys) == 1) {
+			// clear the list
+			userSession.PendingBuys = nil
+		} else {
+			// Pop last sell off the pending list.
+			userSession.PendingBuys = userSession.PendingBuys[1:]
+		}
 		return
 		//fmt.Printf("Time has elapsed on last buy for user %s\n", username)
 	} else {
@@ -268,6 +275,14 @@ func (webServer *WebServer) commitSellHandler(writer http.ResponseWriter, reques
 		webServer.logger.SystemError(webServer.Name, currTransNum, "COMMIT_SELL",
 			username, nil, nil, nil, "Time elapsed on most recent sell")
 		http.Error(writer, "Time elapsed on most recent sell", 400)
+		// Pop off request when invalid
+		if (len(userSession.PendingSells) == 1) {
+			// clear the list
+			userSession.PendingSells = nil
+		} else {
+			// Pop last sell off the pending list.
+			userSession.PendingSells = userSession.PendingSells[1:]
+		}
 		return
 		//fmt.Printf("Time has elapsed on last sell for user %s\n", username)
 	} else {
