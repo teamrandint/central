@@ -10,7 +10,6 @@ import (
 	"net/url"
 	"os"
 	"strconv"
-	"time"
 	"github.com/fatih/pool"
 )
 
@@ -29,9 +28,14 @@ func NewTransmitter(addr string, prt string) *Transmitter {
 	transmitter := new(Transmitter)
 	transmitter.address = addr
 	transmitter.port = prt
-	factory := func() (net.Conn, error) { return net.Dial("tcp", trans.address+":"+trans.port) }
+	factory := func() (net.Conn, error) { return net.Dial("tcp", addr+":"+prt) }
+	var err error
+	transmitter.connectionPool, err = pool.NewChannelPool(5, 30, factory)
 
-	transmitter.connectionPool.NewChannelPool(5, 30, factory)
+	// This is real bad and should abort the entire webserver
+	if err != nil {
+		panic(err)
+	}
 
 	return transmitter
 }
@@ -43,11 +47,7 @@ func (trans *Transmitter) MakeRequest(transNum int, message string) string {
 	var conn net.Conn
 	var err error
 	for {
-		conn, err = net.DialTimeout(
-			"tcp",
-			trans.address+":"+trans.port,
-			time.Second*5,
-		)
+		conn, err = trans.connectionPool.Get()
 
 		if err != nil { // trans server down? retry
 			fmt.Println("Trans server timedout -- retrying")
@@ -56,11 +56,9 @@ func (trans *Transmitter) MakeRequest(transNum int, message string) string {
 		}
 	}
 
-	trans.connection = conn
-
-	trans.connection.Write([]byte(message))
-	reply, _ := bufio.NewReader(trans.connection).ReadString('\n')
-	trans.connection.Close()
+	conn.Write([]byte(message))
+	reply, _ := bufio.NewReader(conn).ReadString('\n')
+	conn.Close()
 	return reply
 }
 

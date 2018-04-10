@@ -25,7 +25,7 @@ type TransactionServer struct {
 }
 
 func main() {
-	serverAddr := ":" + os.Getenv("transport")
+	serverAddr := os.Getenv("transaddr") + ":" + os.Getenv("transport")
 	databaseAddr := "tcp"
 	databasePort := os.Getenv("dbaddr") + ":" + os.Getenv("dbport")
 	auditAddr := "http://" + os.Getenv("auditaddr") + ":" + os.Getenv("auditport")
