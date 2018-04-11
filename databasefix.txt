@@ -1,0 +1,13 @@
+if test -f /sys/kernel/mm/transparent_hugepage/enabled; then
+   echo never > /sys/kernel/mm/transparent_hugepage/enabled
+fi
+if test -f /sys/kernel/mm/transparent_hugepage/defrag; then
+   echo never > /sys/kernel/mm/transparent_hugepage/defrag
+fi
+
+sysctl -w net.core.somaxconn=65535
+
+
+## For more open ports 
+sudo sysctl net.ipv4.ip_local_port_range="15000 61000"
+sudo sysctl net.ipv4.tcp_fin_timeout=30

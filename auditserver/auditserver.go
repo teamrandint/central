@@ -9,6 +9,7 @@ import (
 	"seng468/auditserver/log"
 	"sync"
 	"time"
+	// _ "net/http/pprof"
 )
 
 func userCommandHandler(w http.ResponseWriter, r *http.Request) {
@@ -164,7 +165,7 @@ func main() {
 	http.HandleFunc("/dumpLogRetrieve", dumpLogRetrieveHandler)
 
 	fmt.Printf("Audit server listening on %s:%s\n", os.Getenv("auditaddr"), os.Getenv("auditport"))
-	if err := http.ListenAndServe(os.Getenv("auditaddr")+":"+os.Getenv("auditport"), nil); err != nil {
+	if err := http.ListenAndServe(":"+os.Getenv("auditport"), nil); err != nil {
 		panic(err)
 	}
 }

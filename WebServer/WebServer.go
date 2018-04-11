@@ -14,6 +14,7 @@ import (
 	"seng468/WebServer/logger"
 	"seng468/WebServer/transmitter"
 	"strings"
+	// _ "net/http/pprof"
 )
 
 type WebServer struct {
@@ -142,6 +143,13 @@ func (webServer *WebServer) commitBuyHandler(writer http.ResponseWriter, request
 		go webServer.logger.SystemError(webServer.Name, currTransNum, "COMMIT_BUY",
 			username, nil, nil, nil, "Time elapsed on most recent buy request")
 		http.Error(writer, "Time elapsed on most recent buy request", 400)
+		if (len(userSession.PendingBuys) == 1) {
+			// clear the list
+			userSession.PendingBuys = nil
+		} else {
+			// Pop last sell off the pending list.
+			userSession.PendingBuys = userSession.PendingBuys[1:]
+		}
 		return
 		//fmt.Printf("Time has elapsed on last buy for user %s\n", username)
 	} else {
@@ -154,8 +162,14 @@ func (webServer *WebServer) commitBuyHandler(writer http.ResponseWriter, request
 		http.Error(writer, "Invalid request", 400)
 		return
 	}
-	// Pop last sell off the pending list.
-	userSession.PendingBuys = userSession.PendingBuys[1:]
+
+	if (len(userSession.PendingBuys) == 1) {
+		// clear the list
+		userSession.PendingBuys = nil
+	} else {
+		// Pop last sell off the pending list.
+		userSession.PendingBuys = userSession.PendingBuys[1:]
+	}
 }
 
 func (webServer *WebServer) cancelBuyHandler(writer http.ResponseWriter, request *http.Request) {
@@ -189,8 +203,14 @@ func (webServer *WebServer) cancelBuyHandler(writer http.ResponseWriter, request
 		http.Error(writer, "Invalid request", 400)
 		return
 	}
-	// Pop last sell off the pending list.
-	userSession.PendingBuys = userSession.PendingBuys[1:]
+
+	if (len(userSession.PendingBuys) == 1) {
+		// clear the list
+		userSession.PendingBuys = nil
+	} else {
+		// Pop last sell off the pending list.
+		userSession.PendingBuys = userSession.PendingBuys[1:]
+	}
 }
 
 func (webServer *WebServer) sellHandler(writer http.ResponseWriter, request *http.Request) {
@@ -255,6 +275,14 @@ func (webServer *WebServer) commitSellHandler(writer http.ResponseWriter, reques
 		go webServer.logger.SystemError(webServer.Name, currTransNum, "COMMIT_SELL",
 			username, nil, nil, nil, "Time elapsed on most recent sell")
 		http.Error(writer, "Time elapsed on most recent sell", 400)
+		// Pop off request when invalid
+		if (len(userSession.PendingSells) == 1) {
+			// clear the list
+			userSession.PendingSells = nil
+		} else {
+			// Pop last sell off the pending list.
+			userSession.PendingSells = userSession.PendingSells[1:]
+		}
 		return
 		//fmt.Printf("Time has elapsed on last sell for user %s\n", username)
 	} else {
@@ -267,14 +295,20 @@ func (webServer *WebServer) commitSellHandler(writer http.ResponseWriter, reques
 		http.Error(writer, "Invalid request", 400)
 		return
 	}
-	// Pop last sell off the pending list.
-	userSession.PendingSells = userSession.PendingSells[1:]
+	if (len(userSession.PendingSells) == 1) {
+		// clear the list
+		userSession.PendingSells = nil
+	} else {
+		// Pop last sell off the pending list.
+		userSession.PendingSells = userSession.PendingSells[1:]
+	}
+	
 }
 
 func (webServer *WebServer) cancelSellHandler(writer http.ResponseWriter, request *http.Request) {
 	currTransNum := int(atomic.AddInt64(&webServer.transactionNumber, 1))
 	username := request.FormValue("username")
-	go webServer.logger.UserCommand(webServer.Name, currTransNum, "CANCEL_SELL",
+	webServer.logger.UserCommand(webServer.Name, currTransNum, "CANCEL_SELL",
 		username, nil, nil, nil)
 
 	val, ok := webServer.userSessions.Load(username)
@@ -301,8 +335,14 @@ func (webServer *WebServer) cancelSellHandler(writer http.ResponseWriter, reques
 		http.Error(writer, "Invalid Request", 400)
 		return
 	}
-	// Pop last sell off the pending list.
-	userSession.PendingSells = userSession.PendingSells[1:]
+
+	if (len(userSession.PendingSells) == 1) {
+		// clear the list
+		userSession.PendingSells = nil
+	} else {
+		// Pop last sell off the pending list.
+		userSession.PendingSells = userSession.PendingSells[1:]
+	}
 }
 
 func (webServer *WebServer) setBuyAmountHandler(writer http.ResponseWriter, request *http.Request) {
@@ -484,5 +524,5 @@ func main() {
 	http.HandleFunc("/LOGIN/", webServer.loginHandler)
 
 	fmt.Printf("Successfully started server on %s\n", serverAddress)
-	panic(http.ListenAndServe(os.Getenv("webaddr")+":"+os.Getenv("webport"), nil))
+	panic(http.ListenAndServe(":"+os.Getenv("webport"), nil))
 }

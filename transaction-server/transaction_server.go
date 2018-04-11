@@ -3,6 +3,7 @@ package main
 import (
 	"fmt"
 	"os"
+	
 	"seng468/transaction-server/database"
 	"seng468/transaction-server/logger"
 	"seng468/transaction-server/quote"
@@ -33,8 +34,8 @@ func main() {
 	triggerURL := "http://" + os.Getenv("triggeraddr") + ":" + os.Getenv("triggerport")
 
 	server := socketserver.NewSocketServer(serverAddr)
-	database := database.RedisDatabase{Addr: databaseAddr, Port: databasePort, DbRequests: make(chan *database.Query, 10000),
-		BatchSize: 100, PollRate: 20, BatchResults: make(chan database.Response, 10000), DbPool: database.NewPool(databaseAddr, databasePort)}
+	database := database.RedisDatabase{Addr: databaseAddr, Port: databasePort, DbRequests: make(chan *database.Query, 10),
+			BatchSize: 10, PollRate: 20, BatchResults: make(chan database.Response, 10), DbPool: database.NewPool(databaseAddr, databasePort)}
 	logger := logger.AuditLogger{Addr: auditAddr}
 	triggerclient := triggerclient.TriggerClient{TriggerURL: triggerURL}
 
