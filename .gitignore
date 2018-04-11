@@ -5,3 +5,6 @@ parent/images.tar
 *.exe~
 *.dll
 *.xml
+endpointStats*
+.idea
+output.xml

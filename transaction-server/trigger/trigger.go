@@ -29,7 +29,7 @@ func (t Trigger) String() string {
 }
 
 func (t Trigger) GetCost() decimal.Decimal {
-	return t.amount.Mul(t.price)
+	return t.price.Mul(t.amount)
 }
 
 func (t Trigger) GetAmount() decimal.Decimal {
