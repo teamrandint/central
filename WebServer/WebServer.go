@@ -14,7 +14,7 @@ import (
 	"seng468/WebServer/logger"
 	"seng468/WebServer/transmitter"
 	"strings"
-	_ "net/http/pprof"
+	// _ "net/http/pprof"
 )
 
 type WebServer struct {
