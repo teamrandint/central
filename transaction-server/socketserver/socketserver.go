@@ -50,7 +50,7 @@ func (s SocketServer) Run() {
 			fmt.Println("Error accepting: ", err.Error())
 			continue
 		}
-		go s.handleRequest(conn)
+		go s.handleRequest(conn)		
 	}
 }
 

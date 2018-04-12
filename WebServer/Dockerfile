@@ -4,6 +4,7 @@ COPY . /go/src/seng468/WebServer
 RUN apk add --no-cache git \
     && go get github.com/garyburd/redigo/redis \
     && go get github.com/shopspring/decimal \
+    && go get github.com/fatih/pool \
     && go get golang.org/x/sync/syncmap \
     && cd /go/src/seng468/WebServer \
     && go build -o webserve

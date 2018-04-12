@@ -2,19 +2,19 @@ package main
 
 import (
 	"bufio"
+	"errors"
 	"fmt"
 	"net"
 	"net/http"
 	"os"
 	"seng468/quoteserver/logger"
 	"strconv"
-	"time"
-
-	"errors"
 	"strings"
+	"time"
 
 	"github.com/patrickmn/go-cache"
 	"github.com/shopspring/decimal"
+	// _ "net/http/pprof"
 )
 
 type QuoteReply struct {

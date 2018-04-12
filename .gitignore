@@ -1,6 +1,10 @@
 parent/images.tar
-images.tar
+*.tar
 .vscode
+*.exe
+*.exe~
+*.dll
+*.xml
 endpointStats*
 .idea
 output.xml
