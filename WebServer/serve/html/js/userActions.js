@@ -1,5 +1,4 @@
 var username;
-var URL = "http://172.20.0.5:44456/";
 var pendingSells = [];
 var pendingBuys = [];
 var triggers = [];
@@ -27,7 +26,7 @@ $(document).ready(function(){
 function checkLogin(userName) {
     if (userName === "") {
        // User isn't logged in! Redirect back to login!
-       window.location.replace("http://172.20.0.5:44456/");
+       window.location.replace("/");
     }
 }
 
