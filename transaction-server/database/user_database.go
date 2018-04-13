@@ -81,6 +81,7 @@ func (u RedisDatabase) getConn() redis.Conn {
 
 func NewPool(addr string, port string) *redis.Pool {
 	return &redis.Pool{
+		Wait: true,
 		MaxIdle:     5,
 		MaxActive:   0,
 		IdleTimeout: 120 * time.Second,
