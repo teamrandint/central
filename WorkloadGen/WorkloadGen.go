@@ -3,7 +3,9 @@ package main
 import (
 	"bufio"
 	"fmt"
+	"io"
 	"io/ioutil"
+	"math/rand"
 	"net/http"
 	"net/url"
 	"os"
@@ -31,14 +33,21 @@ var endpointMutex sync.Mutex
 
 // go run WorkloadGen.go serverAddr:port workloadfile
 func main() {
-	if len(os.Args) < 4 {
-		fmt.Printf("Usage: server address, workloadfile, delay(ms)")
+	if len(os.Args) < 5 {
+		fmt.Printf("Usage: server address, workloadfile, delay(ms), getlog(bool)")
 		return
 	}
 
 	serverAddr := os.Args[1]
 	workloadFile := os.Args[2]
 	delayMs, _ := strconv.Atoi(os.Args[3])
+	getLogStr := os.Args[4]
+	var getLog bool
+	if getLogStr != "true" {
+		getLog = false
+	} else {
+		getLog = true
+	}
 	endpointTimes = make(map[string][]endpointHit)
 
 	fmt.Printf("Testing %v on serverAddr %v with delay of %vms\n", workloadFile, serverAddr, delayMs)
@@ -47,14 +56,14 @@ func main() {
 	fmt.Printf("Found %d users...\n", len(users))
 	go countTPS()
 
-	runRequests(serverAddr, users, delayMs)
+	runRequests(serverAddr, users, delayMs, getLog)
 	fmt.Printf("Done!\n")
 
 	printEndpointStats()
 	saveEndpointStats()
 }
 
-func runRequests(serverAddr string, users map[string][]outgoingRequest, delay int) {
+func runRequests(serverAddr string, users map[string][]outgoingRequest, delay int, getLog bool) {
 	var wg sync.WaitGroup
 	for userName, commands := range users {
 		fmt.Printf("Running user %v's commands...\n", userName)
@@ -65,24 +74,26 @@ func runRequests(serverAddr string, users map[string][]outgoingRequest, delay in
 
 	// Wait for commands, then manually post the final dumplog
 	wg.Wait()
-	resp, httpErr := http.PostForm("http://"+serverAddr+"/DUMPLOG/", url.Values{"filename": {"./output.xml"}})
-	if httpErr != nil {
-		panic(httpErr)
-	}
+	if getLog {
+		resp, httpErr := http.PostForm("http://"+serverAddr+"/DUMPLOG/", url.Values{"filename": {"./output.xml"}})
+		if httpErr != nil {
+			panic(httpErr)
+		}
 
-	data, decodeErr := ioutil.ReadAll(resp.Body)
-	if decodeErr != nil {
-		panic(decodeErr)
-	}
+		data, decodeErr := ioutil.ReadAll(resp.Body)
+		if decodeErr != nil {
+			panic(decodeErr)
+		}
 
-	file, createErr := os.Create("./output.xml")
-	defer file.Close()
-	if createErr != nil {
-		fmt.Printf("error: %v %v\n", createErr, file)
-	}
-	_, writeErr := file.Write(data)
-	if writeErr != nil {
-		panic(writeErr)
+		file, createErr := os.Create("./output.xml")
+		defer file.Close()
+		if createErr != nil {
+			fmt.Printf("error: %v %v\n", createErr, file)
+		}
+		_, writeErr := file.Write(data)
+		if writeErr != nil {
+			panic(writeErr)
+		}
 	}
 }
 
@@ -98,12 +109,12 @@ func runUserRequests(serverAddr string, delay int, userName string, commands []o
 	resp, err := client.PostForm("http://"+serverAddr+"/"+"LOGIN"+"/", url.Values{"username": {userName}})
 	if err != nil {
 		fmt.Println(err)
-	} else {
-		resp.Body.Close()
 	}
+	io.Copy(ioutil.Discard, resp.Body)
+	resp.Body.Close()
 
 	for _, command := range commands {
-		time.Sleep(time.Duration(delay) * time.Millisecond)
+		time.Sleep(time.Duration(rand.Intn(delay)) * time.Millisecond)
 
 		var resp *http.Response
 		var err error
@@ -111,6 +122,7 @@ func runUserRequests(serverAddr string, delay int, userName string, commands []o
 
 		for {
 			resp, err = client.PostForm("http://"+serverAddr+"/"+command.endpoint+"/", command.params)
+			defer resp.Body.Close()
 			if err != nil {
 				fmt.Println(err.Error())
 			} else {
@@ -118,7 +130,6 @@ func runUserRequests(serverAddr string, delay int, userName string, commands []o
 			}
 		}
 
-		resp.Body.Close()
 		responseTime := time.Since(time0)
 
 		endpointMutex.Lock()

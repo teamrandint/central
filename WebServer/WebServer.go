@@ -7,6 +7,7 @@ import (
 	"regexp"
 	"seng468/WebServer/Commands"
 	"sync/atomic"
+	"time"
 
 	"golang.org/x/sync/syncmap"
 
@@ -529,8 +530,13 @@ func main() {
 		transactionNumber: 0,
 		userSessions:      new(syncmap.Map),
 		transmitter:       transmitter.NewTransmitter(os.Getenv("transaddr"), os.Getenv("transport")),
-		logger:            logger.AuditLogger{Addr: auditAddr},
-		validPath:         regexp.MustCompile("^/(ADD|QUOTE|BUY|COMMIT_BUY|CANCEL_BUY|SELL|COMMIT_SELL|CANCEL_SELL|SET_BUY_AMOUNT|CANCEL_SET_BUY|SET_BUY_TRIGGER|SET_SELL_AMOUNT|SET_SELL_TRIGGER|CANCEL_SET_SELL|DUMPLOG|DISPLAY_SUMMARY|LOGIN)/$"),
+		logger: logger.AuditLogger{
+			Addr: auditAddr,
+			Client: http.Client{
+				Timeout: time.Second,
+			},
+		},
+		validPath: regexp.MustCompile("^/(ADD|QUOTE|BUY|COMMIT_BUY|CANCEL_BUY|SELL|COMMIT_SELL|CANCEL_SELL|SET_BUY_AMOUNT|CANCEL_SET_BUY|SET_BUY_TRIGGER|SET_SELL_AMOUNT|SET_SELL_TRIGGER|CANCEL_SET_SELL|DUMPLOG|DISPLAY_SUMMARY|LOGIN)/$"),
 	}
 
 	http.Handle("/", http.FileServer(http.Dir("./html")))

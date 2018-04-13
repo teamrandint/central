@@ -2,11 +2,11 @@ package logger
 
 import (
 	"fmt"
+	"io"
+	"io/ioutil"
 	"log"
-	"net"
 	"net/http"
 	"strconv"
-	"time"
 )
 
 type Logger interface {
@@ -33,7 +33,8 @@ type Logger interface {
 }
 
 type AuditLogger struct {
-	Addr string
+	Addr   string
+	Client http.Client
 }
 
 func (al AuditLogger) DumpLog(filename string, username interface{}) {
@@ -146,8 +147,9 @@ func (al AuditLogger) QuoteServer(server string, transactionNum int,
 }
 
 func (al AuditLogger) SendLog(slash string, params map[string]string) {
+	var resp *http.Response
 	req, err := http.NewRequest("get", al.Addr+slash, nil)
-	req.Header.Set("Connection", "close")
+	req.Header.Set("Connection", "keep-alive")
 	if err != nil {
 		log.Print(err)
 	}
@@ -158,24 +160,15 @@ func (al AuditLogger) SendLog(slash string, params map[string]string) {
 	}
 
 	req.URL.RawQuery = url.Encode()
-	transport := &http.Transport{
-		Proxy: http.ProxyFromEnvironment,
-		Dial: (&net.Dialer{
-			Timeout:   time.Second * 15,
-			KeepAlive: 0,
-		}).Dial,
-		TLSHandshakeTimeout: 0,
-	}
-	client := &http.Client{Transport: transport}
-	var resp *http.Response
 	for {
-		resp, err = client.Do(req)
+		resp, err = al.Client.Do(req)
 
 		if err != nil { // trans server down? retry
 			fmt.Println("LOG timeout: ", err.Error())
 		} else {
+			io.Copy(ioutil.Discard, resp.Body)
+			resp.Body.Close()
 			break
 		}
 	}
-	resp.Body.Close()
 }
