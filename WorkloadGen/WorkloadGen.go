@@ -89,9 +89,9 @@ func runRequests(serverAddr string, users map[string][]outgoingRequest, delay in
 func runUserRequests(serverAddr string, delay int, userName string, commands []outgoingRequest, wg *sync.WaitGroup) {
 	defer wg.Done()
 
-	timeout := time.Duration(3 * time.Second)
+	//timeout := time.Duration(3 * time.Second)
 	client := http.Client{
-		Timeout: timeout,
+	//Timeout: timeout,
 	}
 
 	// Issue login before executing any commands
