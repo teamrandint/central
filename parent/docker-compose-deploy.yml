@@ -4,9 +4,7 @@ networks:
         external: true
 services:
     web:
-        image: teamrandint/webserver
-        deploy:
-            replicas: ${num_web}
+        image: 192.168.1.150:5111/teamrandint/webserver:latest
         depends_on:
             - "transaction"
             - "database"
@@ -20,13 +18,12 @@ services:
         networks:
           - randint-overlay
         deploy:
+          replicas: ${num_web}
           placement:
             constraints: 
-                - node.hostname != b131.seng
-                - node.hostname != b132.seng
-                - node.hostname != b136.seng
+                - node.hostname == b143.seng
     audit:
-        image: teamrandint/auditserver
+        image: 192.168.1.150:5111/teamrandint/auditserver:latest
         env_file:
             - .env
         ports:
@@ -36,11 +33,9 @@ services:
         deploy:
           placement:
             constraints: 
-                - node.hostname != b131.seng
-                - node.hostname != b132.seng
-                - node.hostname != b136.seng
+                - node.hostname == b141.seng
     database:
-        image: teamrandint/database
+        image: 192.168.1.150:5111/teamrandint/database:latest
         env_file:
             - .env
         ports:
@@ -50,11 +45,9 @@ services:
         deploy:
           placement:
             constraints: 
-                - node.hostname != b131.seng
-                - node.hostname != b132.seng
-                - node.hostname != b136.seng
+                - node.hostname == b153.seng
     transaction:
-        image: teamrandint/transactionserver
+        image: 192.168.1.150:5111/teamrandint/transactionserver:latest
         depends_on:
             - "database"
             - "audit"
@@ -69,11 +62,9 @@ services:
             replicas: ${num_trans}
             placement:
                 constraints: 
-                    - node.hostname != b131.seng
-                    - node.hostname != b132.seng
-                    - node.hostname != b136.seng
+                    - node.hostname == b153.seng
     quote:
-        image: teamrandint/quoteserver
+        image: 192.168.1.150:5111/teamrandint/quoteserver:latest
         depends_on:
             - "audit"
         env_file:
@@ -85,11 +76,9 @@ services:
         deploy:
           placement:
             constraints: 
-                - node.hostname != b131.seng
-                - node.hostname != b132.seng
-                - node.hostname != b136.seng
+                - node.hostname == b143.seng
     trigger:
-        image: teamrandint/triggerserver
+        image: 192.168.1.150:5111/teamrandint/triggerserver:latest
         depends_on:
             - "audit"
         env_file:
@@ -101,11 +90,9 @@ services:
         deploy:
           placement:
             constraints: 
-                - node.hostname != b131.seng
-                - node.hostname != b132.seng
-                - node.hostname != b136.seng
+                - node.hostname == b149.seng
     proxy_web:
-        image: dockercloud/haproxy
+        image: 192.168.1.150:5111/teamrandint/haproxy:latest
         depends_on:
           - web
         environment:
@@ -124,6 +111,10 @@ services:
           placement:
             constraints: 
                 - node.role == manager
+                - node.hostname == b138.seng
+                - node.hostname != b130.seng
                 - node.hostname != b131.seng
                 - node.hostname != b132.seng
                 - node.hostname != b136.seng
+                - node.hostname != b153.seng
+                - node.hostname != b147.seng
