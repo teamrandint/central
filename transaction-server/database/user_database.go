@@ -81,12 +81,7 @@ func (u RedisDatabase) getConn() redis.Conn {
 
 func NewPool(addr string, port string) *redis.Pool {
 	return &redis.Pool{
-<<<<<<< HEAD
-		Wait: true,
-		MaxIdle:     5,
-=======
 		MaxIdle:     100,
->>>>>>> origin/transRewrite
 		MaxActive:   0,
 		IdleTimeout: 0,
 		Dial:        func() (redis.Conn, error) { return redis.Dial(addr, port) },

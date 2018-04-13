@@ -61,11 +61,6 @@ func (webServer *WebServer) addHandler(writer http.ResponseWriter, request *http
 
 	resp := webServer.transmitter.MakeRequest(currTransNum, "ADD,"+username+","+amount)
 	if resp == "-1" {
-<<<<<<< HEAD
-		webServer.logger.SystemError(webServer.Name, currTransNum, "ADD",
-			username, nil, nil, nil, "Bad response from transactionserv")
-=======
->>>>>>> origin/transRewrite
 		http.Error(writer, "Invalid Request", 400)
 		return
 	}
@@ -89,11 +84,6 @@ func (webServer *WebServer) quoteHandler(writer http.ResponseWriter, request *ht
 	resp := webServer.transmitter.MakeRequest(currTransNum, "QUOTE,"+username+","+stock)
 
 	if resp == "-1" {
-<<<<<<< HEAD
-		webServer.logger.SystemError(webServer.Name, currTransNum, "QUOTE",
-			username, stock, nil, nil, "Bad response from transactionserv")
-=======
->>>>>>> origin/transRewrite
 		http.Error(writer, "Invalid Request", 400)
 		return
 	}
@@ -121,11 +111,6 @@ func (webServer *WebServer) buyHandler(writer http.ResponseWriter, request *http
 	resp := webServer.transmitter.MakeRequest(currTransNum, "BUY,"+username+","+stock+","+amount)
 
 	if resp == "-1" {
-<<<<<<< HEAD
-		webServer.logger.SystemError(webServer.Name, currTransNum, "BUY",
-			username, stock, nil, amount, "Bad response from transactionserv")
-=======
->>>>>>> origin/transRewrite
 		http.Error(writer, "Invalid Request", 400)
 		return
 	}
@@ -151,12 +136,7 @@ func (webServer *WebServer) commitBuyHandler(writer http.ResponseWriter, request
 
 	if !userSession.HasPendingBuys() {
 		// No pendings buys, return error
-<<<<<<< HEAD
-		//fmt.Printf("No buys to commit for user %s\n", username)
-		webServer.logger.SystemError(webServer.Name, currTransNum, "COMMIT_BUY",
-=======
 		go webServer.logger.SystemError(webServer.Name, currTransNum, "COMMIT_BUY",
->>>>>>> origin/transRewrite
 			username, nil, nil, nil, "No pending buys to commit")
 		http.Error(writer, "No pending buys to commit", 400)
 		return
@@ -183,11 +163,6 @@ func (webServer *WebServer) commitBuyHandler(writer http.ResponseWriter, request
 	}
 
 	if resp == "-1" {
-<<<<<<< HEAD
-		webServer.logger.SystemError(webServer.Name, currTransNum, "COMMIT_BUY",
-			username, nil, nil, nil, "Bad response from transactionserv")
-=======
->>>>>>> origin/transRewrite
 		http.Error(writer, "Invalid request", 400)
 		return
 	}
@@ -226,11 +201,6 @@ func (webServer *WebServer) cancelBuyHandler(writer http.ResponseWriter, request
 	resp := webServer.transmitter.MakeRequest(currTransNum, "CANCEL_BUY,"+username)
 
 	if resp == "-1" {
-<<<<<<< HEAD
-		webServer.logger.SystemError(webServer.Name, currTransNum, "CANCEL_BUY",
-			username, nil, nil, nil, "Bad response from transactionserv")
-=======
->>>>>>> origin/transRewrite
 		http.Error(writer, "Invalid request", 400)
 		return
 	}
@@ -264,11 +234,6 @@ func (webServer *WebServer) sellHandler(writer http.ResponseWriter, request *htt
 
 	resp := webServer.transmitter.MakeRequest(currTransNum, "SELL,"+username+","+stock+","+amount)
 	if resp == "-1" {
-<<<<<<< HEAD
-		webServer.logger.SystemError(webServer.Name, currTransNum, "SELL",
-			username, stock, nil, amount, "Bad response from transactionserv")
-=======
->>>>>>> origin/transRewrite
 		http.Error(writer, "Bad response from transactionserv", 400)
 		return
 	}
@@ -322,11 +287,6 @@ func (webServer *WebServer) commitSellHandler(writer http.ResponseWriter, reques
 	}
 
 	if resp == "-1" {
-<<<<<<< HEAD
-		webServer.logger.SystemError(webServer.Name, currTransNum, "COMMIT_SELL",
-			username, nil, nil, nil, "Bad response from transactionserv")
-=======
->>>>>>> origin/transRewrite
 		http.Error(writer, "Invalid request", 400)
 		return
 	}
@@ -364,11 +324,6 @@ func (webServer *WebServer) cancelSellHandler(writer http.ResponseWriter, reques
 	resp := webServer.transmitter.MakeRequest(currTransNum, "CANCEL_SELL,"+username)
 
 	if resp == "-1" {
-<<<<<<< HEAD
-		webServer.logger.SystemError(webServer.Name, currTransNum, "CANCEL_SELL",
-			username, nil, nil, nil, "Bad response from transactionserv")
-=======
->>>>>>> origin/transRewrite
 		http.Error(writer, "Invalid Request", 400)
 		return
 	}
@@ -401,11 +356,6 @@ func (webServer *WebServer) setBuyAmountHandler(writer http.ResponseWriter, requ
 	resp := webServer.transmitter.MakeRequest(currTransNum, "SET_BUY_AMOUNT,"+username+","+stock+","+amount)
 
 	if resp == "-1" {
-<<<<<<< HEAD
-		webServer.logger.SystemError(webServer.Name, currTransNum, "SET_BUY_AMOUNT",
-			username, stock, nil, amount, "Bad response from transactionserv")
-=======
->>>>>>> origin/transRewrite
 		http.Error(writer, "Invalid Request", 400)
 		return
 	}
@@ -429,11 +379,6 @@ func (webServer *WebServer) cancelSetBuyHandler(writer http.ResponseWriter, requ
 	resp := webServer.transmitter.MakeRequest(currTransNum, "CANCEL_SET_BUY,"+username+","+stock)
 
 	if resp == "-1" {
-<<<<<<< HEAD
-		webServer.logger.SystemError(webServer.Name, currTransNum, "CANCEL_SET_BUY",
-			username, stock, nil, nil, "Bad response from transactionserv")
-=======
->>>>>>> origin/transRewrite
 		http.Error(writer, "Invalid Request", 400)
 		return
 	}
@@ -458,11 +403,6 @@ func (webServer *WebServer) setBuyTriggerHandler(writer http.ResponseWriter, req
 	resp := webServer.transmitter.MakeRequest(currTransNum, "SET_BUY_TRIGGER,"+username+","+stock+","+amount)
 
 	if resp == "-1" {
-<<<<<<< HEAD
-		webServer.logger.SystemError(webServer.Name, currTransNum, "SET_BUY_TRIGGER",
-			username, stock, nil, amount, "Bad response from transactionserv")
-=======
->>>>>>> origin/transRewrite
 		http.Error(writer, "Invalid Request", 400)
 		return
 	}
@@ -487,11 +427,6 @@ func (webServer *WebServer) setSellAmountHandler(writer http.ResponseWriter, req
 	resp := webServer.transmitter.MakeRequest(currTransNum, "SET_SELL_AMOUNT,"+username+","+stock+","+amount)
 
 	if resp == "-1" {
-<<<<<<< HEAD
-		webServer.logger.SystemError(webServer.Name, currTransNum, "SET_SELL_AMOUNT",
-			username, stock, nil, amount, "Bad response from transactionserv")
-=======
->>>>>>> origin/transRewrite
 		http.Error(writer, "Invalid Request", 400)
 		return
 	}
@@ -515,11 +450,6 @@ func (webServer *WebServer) setSellTriggerHandler(writer http.ResponseWriter, re
 
 	resp := webServer.transmitter.MakeRequest(currTransNum, "SET_SELL_TRIGGER,"+username+","+stock+","+amount)
 	if resp == "-1" {
-<<<<<<< HEAD
-		webServer.logger.SystemError(webServer.Name, currTransNum, "SET_SELL_TRIGGER",
-			username, stock, nil, amount, "Bad response from transactionserv")
-=======
->>>>>>> origin/transRewrite
 		http.Error(writer, "Invalid Request", 400)
 		return
 	}
@@ -542,11 +472,6 @@ func (webServer *WebServer) cancelSetSellHandler(writer http.ResponseWriter, req
 
 	resp := webServer.transmitter.MakeRequest(currTransNum, "CANCEL_SET_SELL,"+username+","+stock)
 	if resp == "-1" {
-<<<<<<< HEAD
-		webServer.logger.SystemError(webServer.Name, currTransNum, "CANCEL_SET_SELL",
-			username, stock, nil, nil, "Bad response from transactionserv")
-=======
->>>>>>> origin/transRewrite
 		http.Error(writer, "Invalid Request", 400)
 		return
 	}

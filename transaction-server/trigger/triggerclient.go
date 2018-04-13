@@ -129,14 +129,10 @@ func (tc TriggerClient) setTrigger(transNum int, newTrigger Trigger) error {
 		"amount":   {newTrigger.getAmountStr()},
 	}
 	resp, err := http.PostForm(tc.TriggerURL+setEndpoint, values)
-<<<<<<< HEAD
 	defer resp.Body.Close()
-=======
-	defer resp.Body.Close() 
->>>>>>> origin/transRewrite
 	if err != nil {
 		return err
-	} 
+	}
 
 	return nil
 }
