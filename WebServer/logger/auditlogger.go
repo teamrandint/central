@@ -163,7 +163,7 @@ func (al AuditLogger) SendLog(slash string, params map[string]string) {
 		Dial: (&net.Dialer{
 			KeepAlive: time.Second * 15,
 		}).Dial,
-		TLSHandshakeTimeout: 10 * time.Second,
+		TLSHandshakeTimeout: 0,
 	}
 	client := &http.Client{Transport: transport}
 	var resp *http.Response
