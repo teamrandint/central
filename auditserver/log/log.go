@@ -15,7 +15,11 @@ type Log struct {
 
 // Write takes in a writer object and writes the log to a file
 func (l *Log) Write(w io.Writer) {
-	w.Write(l.Byte())
+	enc := xml.NewEncoder(w)
+	enc.Indent("  ", "    ")
+	if err := enc.Encode(l.Entries); err != nil {
+		fmt.Printf("error: %v\n", err)
+	}
 }
 
 // String returns an XML representation of the log
