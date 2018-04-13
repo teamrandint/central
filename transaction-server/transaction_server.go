@@ -37,10 +37,10 @@ func main() {
 	database := database.RedisDatabase{
 		Addr:         databaseAddr,
 		Port:         databasePort,
-		DbRequests:   make(chan *database.Query, 10),
-		BatchSize:    10,
+		DbRequests:   make(chan *database.Query, 1000),
+		BatchSize:    100,
 		PollRate:     20,
-		BatchResults: make(chan database.Response, 10),
+		BatchResults: make(chan database.Response, 1000),
 		DbPool:       database.NewPool(databaseAddr, databasePort),
 	}
 	logger := logger.AuditLogger{Addr: auditAddr}
