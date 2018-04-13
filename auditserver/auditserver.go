@@ -12,6 +12,16 @@ import (
 	// _ "net/http/pprof"
 )
 
+func auditWorker() {
+	for {
+		// receive from channel, or be blocked
+		command := <- logChannel 
+		mutex.Lock()
+		eventlog.Insert(command)
+		mutex.Unlock()
+	}
+}
+
 func userCommandHandler(w http.ResponseWriter, r *http.Request) {
 	timestamp := makeTimestamp()
 	query := r.URL.Query()
@@ -27,9 +37,7 @@ func userCommandHandler(w http.ResponseWriter, r *http.Request) {
 		Filename:       query.Get("filename"),
 		Funds:          query.Get("funds"),
 	}
-	mutex.Lock()
-	eventlog.Insert(v)
-	mutex.Unlock()
+	logChannel <- v 
 
 	w.Write([]byte("OK"))
 }
@@ -49,9 +57,7 @@ func quoteServerHandler(w http.ResponseWriter, r *http.Request) {
 		QuoteServerTime: query.Get("quoteServerTime"),
 		Cryptokey:       query.Get("cryptokey"),
 	}
-	mutex.Lock()
-	eventlog.Insert(v)
-	mutex.Unlock()
+	logChannel <- v 
 
 	w.Write([]byte("OK"))
 }
@@ -69,9 +75,7 @@ func accountTransactionHandler(w http.ResponseWriter, r *http.Request) {
 		Username:       query.Get("username"),
 		Funds:          query.Get("funds"),
 	}
-	mutex.Lock()
-	eventlog.Insert(v)
-	mutex.Unlock()
+	logChannel <- v 
 
 	w.Write([]byte("OK"))
 }
@@ -91,9 +95,7 @@ func systemEventHandler(w http.ResponseWriter, r *http.Request) {
 		Filename:       query.Get("filename"),
 		Funds:          query.Get("funds"),
 	}
-	mutex.Lock()
-	eventlog.Insert(v)
-	mutex.Unlock()
+	logChannel <- v 
 
 	w.Write([]byte("OK"))
 }
@@ -114,9 +116,7 @@ func errorEventHandler(w http.ResponseWriter, r *http.Request) {
 		Funds:          query.Get("funds"),
 		ErrorMessage:   query.Get("errorMessage"),
 	}
-	mutex.Lock()
-	eventlog.Insert(v)
-	mutex.Unlock()
+	logChannel <- v 
 
 	w.Write([]byte("OK"))
 }
@@ -154,6 +154,7 @@ func makeTimestamp() int64 {
 
 var eventlog = log.Log{}
 var mutex sync.Mutex
+var logChannel = make(chan commands.Command, 10000)
 
 func main() {
 	http.HandleFunc("/userCommand", userCommandHandler)
@@ -165,6 +166,7 @@ func main() {
 	http.HandleFunc("/dumpLogRetrieve", dumpLogRetrieveHandler)
 
 	fmt.Printf("Audit server listening on %s:%s\n", os.Getenv("auditaddr"), os.Getenv("auditport"))
+	go auditWorker()
 	if err := http.ListenAndServe(":"+os.Getenv("auditport"), nil); err != nil {
 		panic(err)
 	}
