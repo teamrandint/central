@@ -52,6 +52,13 @@ func (webServer *WebServer) addHandler(writer http.ResponseWriter, request *http
 
 	go webServer.logger.UserCommand(webServer.Name, currTransNum, "ADD", username, nil, nil, amount)
 
+	_, ok := webServer.userSessions.Load(username)
+	// User must be logged in to execute any commands.
+	if !ok {
+		http.Error(writer, "Must be logged in to perform commands", 400)
+		return
+	}
+
 	resp := webServer.transmitter.MakeRequest(currTransNum, "ADD,"+username+","+amount)
 	if resp == "-1" {
 		http.Error(writer, "Invalid Request", 400)
@@ -66,6 +73,13 @@ func (webServer *WebServer) quoteHandler(writer http.ResponseWriter, request *ht
 
 	go webServer.logger.UserCommand(webServer.Name, currTransNum, "QUOTE",
 		username, stock, nil, nil)
+
+	_, ok := webServer.userSessions.Load(username)
+	// User must be logged in to execute any commands.
+	if !ok {
+		http.Error(writer, "Must be logged in to perform commands", 400)
+		return
+	}
 
 	resp := webServer.transmitter.MakeRequest(currTransNum, "QUOTE,"+username+","+stock)
 
@@ -332,7 +346,7 @@ func (webServer *WebServer) setBuyAmountHandler(writer http.ResponseWriter, requ
 	go webServer.logger.UserCommand(webServer.Name, currTransNum, "SET_BUY_AMOUNT",
 		username, stock, nil, amount)
 
-	val, ok := webServer.userSessions.Load(username)
+	_, ok := webServer.userSessions.Load(username)
 	// User must be logged in to execute any commands.
 	if !ok {
 		http.Error(writer, "Must be logged in to perform commands", 400)
@@ -355,7 +369,7 @@ func (webServer *WebServer) cancelSetBuyHandler(writer http.ResponseWriter, requ
 	go webServer.logger.UserCommand(webServer.Name, currTransNum, "CANCEL_SET_BUY",
 		username, stock, nil, nil)
 
-	val, ok := webServer.userSessions.Load(username)
+	_, ok := webServer.userSessions.Load(username)
 	// User must be logged in to execute any commands.
 	if !ok {
 		http.Error(writer, "Must be logged in to perform commands", 400)
@@ -379,7 +393,7 @@ func (webServer *WebServer) setBuyTriggerHandler(writer http.ResponseWriter, req
 	go webServer.logger.UserCommand(webServer.Name, currTransNum, "SET_BUY_TRIGGER",
 		username, stock, nil, amount)
 
-	val, ok := webServer.userSessions.Load(username)
+	_, ok := webServer.userSessions.Load(username)
 	// User must be logged in to execute any commands.
 	if !ok {
 		http.Error(writer, "Must be logged in to perform commands", 400)
@@ -403,7 +417,7 @@ func (webServer *WebServer) setSellAmountHandler(writer http.ResponseWriter, req
 	go webServer.logger.UserCommand(webServer.Name, currTransNum, "SET_SELL_AMOUNT",
 		username, stock, nil, amount)
 
-	val, ok := webServer.userSessions.Load(username)
+	_, ok := webServer.userSessions.Load(username)
 	// User must be logged in to execute any commands.
 	if !ok {
 		http.Error(writer, "Must be logged in to perform commands", 400)
@@ -427,7 +441,7 @@ func (webServer *WebServer) setSellTriggerHandler(writer http.ResponseWriter, re
 	go webServer.logger.UserCommand(webServer.Name, currTransNum, "SET_SELL_TRIGGER",
 		username, stock, nil, amount)
 
-	val, ok := webServer.userSessions.Load(username)
+	_, ok := webServer.userSessions.Load(username)
 	// User must be logged in to execute any commands.
 	if !ok {
 		http.Error(writer, "Must be logged in to perform commands", 400)
@@ -449,7 +463,7 @@ func (webServer *WebServer) cancelSetSellHandler(writer http.ResponseWriter, req
 	go webServer.logger.UserCommand(webServer.Name, currTransNum, "CANCEL_SET_SELL",
 		username, stock, nil, nil)
 
-	val, ok := webServer.userSessions.Load(username)
+	_, ok := webServer.userSessions.Load(username)
 	// User must be logged in to execute any commands.
 	if !ok {
 		http.Error(writer, "Must be logged in to perform commands", 400)
@@ -488,7 +502,7 @@ func (webServer *WebServer) displaySummaryHandler(writer http.ResponseWriter, re
 	go webServer.logger.UserCommand(webServer.Name, currTransNum, "DISPLAY_SUMMARY",
 		username, nil, nil, nil)
 
-	val, ok := webServer.userSessions.Load(username)
+	_, ok := webServer.userSessions.Load(username)
 	// User must be logged in to execute any commands.
 	if !ok {
 		http.Error(writer, "Must be logged in to perform commands", 400)
