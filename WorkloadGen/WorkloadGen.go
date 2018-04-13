@@ -112,7 +112,7 @@ func runUserRequests(serverAddr string, delay int, userName string, commands []o
 		for {
 			resp, err = client.PostForm("http://"+serverAddr+"/"+command.endpoint+"/", command.params)
 			if err != nil {
-				//fmt.Println("Post timed out -- retrying")
+				fmt.Println(err.Error())
 			} else {
 				break
 			}
