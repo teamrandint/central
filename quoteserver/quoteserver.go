@@ -74,14 +74,16 @@ func quote(user string, stock string, transNum int) (decimal.Decimal, error) {
 	conn.Write([]byte(request))
 	message, err := bufio.NewReader(conn).ReadString('\n')
 	if err != nil {
+		fmt.Println(err)
 		return decimal.Decimal{}, err
 	}
 	defer conn.Close()
 	reply := getReply(message)
+	fmt.Println(reply)
 	if reply == nil {
 		return decimal.Decimal{}, errors.New("reply from quoteserve doesn't match regex")
 	}
-	go auditServer.QuoteServer("quoteserver", transNum, reply.quote.String(), reply.stock,
+	auditServer.QuoteServer("quoteserver", transNum, reply.quote.String(), reply.stock,
 		reply.user, reply.time, reply.key)
 	quoteCache.Set(reply.stock, reply.quote.String(), cache.DefaultExpiration)
 	return reply.quote, nil
