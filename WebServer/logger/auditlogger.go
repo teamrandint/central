@@ -172,7 +172,7 @@ func (al AuditLogger) SendLog(slash string, params map[string]string) {
 		resp, err = client.Do(req)
 
 		if err != nil { // trans server down? retry
-			fmt.Println(err.Error())
+			fmt.Println("LOG timeout: ", err.Error())
 		} else {
 			break
 		}

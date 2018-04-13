@@ -16,9 +16,7 @@ func auditWorker() {
 	for {
 		// receive from channel, or be blocked
 		command := <-logChannel
-		mutex.Lock()
 		eventlog.Insert(command)
-		mutex.Unlock()
 	}
 }
 
