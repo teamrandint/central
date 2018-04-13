@@ -152,7 +152,9 @@ func makeTimestamp() int64 {
 	return time.Now().UnixNano() / (int64(time.Millisecond) / int64(time.Nanosecond))
 }
 
-var eventlog = log.Log{}
+var eventlog = log.Log{
+	Entries: make([]commands.Command, 5000000),
+}
 var mutex sync.Mutex
 
 func main() {
