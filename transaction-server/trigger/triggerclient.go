@@ -128,7 +128,8 @@ func (tc TriggerClient) setTrigger(transNum int, newTrigger Trigger) error {
 		"stock":    {newTrigger.stockname},
 		"amount":   {newTrigger.getAmountStr()},
 	}
-	_, err := http.PostForm(tc.TriggerURL+setEndpoint, values)
+	resp, err := http.PostForm(tc.TriggerURL+setEndpoint, values)
+	defer resp.Body.Close()
 	if err != nil {
 		return err
 	}
@@ -186,6 +187,7 @@ func (tc TriggerClient) getTriggerFromResponse(resp *http.Response) (Trigger, er
 	if err != nil {
 		panic(err)
 	}
+	resp.Body.Close()
 	bodyString := string(bodyBytes)
 	return tc.parseTriggerFromString(bodyString)
 }
