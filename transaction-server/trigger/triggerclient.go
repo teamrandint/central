@@ -128,10 +128,11 @@ func (tc TriggerClient) setTrigger(transNum int, newTrigger Trigger) error {
 		"stock":    {newTrigger.stockname},
 		"amount":   {newTrigger.getAmountStr()},
 	}
-	_, err := http.PostForm(tc.TriggerURL+setEndpoint, values)
+	resp, err := http.PostForm(tc.TriggerURL+setEndpoint, values)
+	defer resp.Body.Close() 
 	if err != nil {
 		return err
-	}
+	} 
 
 	return nil
 }
@@ -146,6 +147,7 @@ func (tc TriggerClient) startTrigger(transNum int, newTrigger Trigger) (Trigger,
 		"price":    {newTrigger.getPriceStr()},
 	}
 	resp, err := http.PostForm(tc.TriggerURL+startEndpoint, values) // TODO: verify BadRequest causes error
+	defer resp.Body.Close()
 	if err != nil {
 		return Trigger{}, err
 	}
@@ -165,6 +167,7 @@ func (tc TriggerClient) cancelTrigger(transNum int, cancel Trigger) (Trigger, er
 		"stock":    {cancel.stockname},
 	}
 	resp, err := http.PostForm(tc.TriggerURL+cancelEndpoint, values)
+	defer resp.Body.Close()
 	if err != nil {
 		return Trigger{}, err
 	}
@@ -175,7 +178,8 @@ func (tc TriggerClient) cancelTrigger(transNum int, cancel Trigger) (Trigger, er
 // ListRunningTriggers returns a list of all running triggers on the TriggerServer
 // TODO: something useful if needed
 func (tc TriggerClient) ListRunningTriggers() {
-	_, err := http.Get(tc.TriggerURL + listEndpoint)
+	resp, err := http.Get(tc.TriggerURL + listEndpoint)
+	defer resp.Body.Close()
 	if err != nil {
 		panic(err)
 	}

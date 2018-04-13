@@ -81,16 +81,16 @@ func (u RedisDatabase) getConn() redis.Conn {
 
 func NewPool(addr string, port string) *redis.Pool {
 	return &redis.Pool{
-		MaxIdle:     5,
+		MaxIdle:     100,
 		MaxActive:   0,
-		IdleTimeout: 120 * time.Second,
+		IdleTimeout: 0,
 		Dial:        func() (redis.Conn, error) { return redis.Dial(addr, port) },
 	}
 }
 
 // GetUserInfo returns all of a users information in the database
 func (u RedisDatabase) GetUserInfo(user string) (info string, err error) {
-	c := u.getConn()
+	c := u.DbPool.Get()
 	c.Send("MULTI")
 	c.Send("GET", user+":Balance")
 	c.Send("HGETALL", user+":Stocks")
@@ -106,7 +106,7 @@ func (u RedisDatabase) GetUserInfo(user string) (info string, err error) {
 	if err != nil {
 		return "", err
 	}
-	c.Close()
+	defer c.Close()
 	userInfo, err := GetUserInfoFromReply(user, r)
 	if err != nil {
 		return "", err
@@ -371,7 +371,6 @@ func (u RedisDatabase) DbRequestWorker() {
 			if len(reqQue) >= u.BatchSize {
 				u.MakeDbRequests(reqQue)
 				reqQue = nil
-				reqQue = []*Query{}
 				// Reset poll rate back to default
 				u.PollRate = 20
 			}

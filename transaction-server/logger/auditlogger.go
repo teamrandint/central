@@ -138,7 +138,7 @@ func (al AuditLogger) SendLog(slash string, params map[string]string) {
 	transport := &http.Transport{
 		Proxy: http.ProxyFromEnvironment,
 		Dial: (&net.Dialer{
-			Timeout:   0,
+			Timeout:   time.Second * 15,
 			KeepAlive: 0,
 		}).Dial,
 		TLSHandshakeTimeout: 10 * time.Second,
