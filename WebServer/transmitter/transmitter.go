@@ -3,7 +3,6 @@ package transmitter
 import (
 	"bufio"
 	"fmt"
-	"io"
 	"io/ioutil"
 	"log"
 	"net"
@@ -39,7 +38,7 @@ func NewTransmitter(addr string, prt string) *Transmitter {
 		)
 	}
 	var err error
-	transmitter.connectionPool, err = pool.NewChannelPool(1000, 1500, factory)
+	transmitter.connectionPool, err = pool.NewChannelPool(100, 1500, factory)
 
 	// This is real bad and should abort the entire webserver
 	if err != nil {
@@ -56,24 +55,23 @@ func (trans *Transmitter) MakeRequest(transNum int, message string) string {
 
 	conn, err := trans.connectionPool.Get()
 	if err != nil {
-		fmt.Println(err.Error())
+		fmt.Println("ERROR1: ", err.Error())
 	}
 	defer conn.Close()
 
 	n, err := conn.Write([]byte(message))
 	if err != nil {
-		fmt.Println(err)
-		if pc, ok := conn.(*pool.PoolConn); ok {
-			pc.MarkUnusable()
-			pc.Close()
-		}
+		fmt.Println("ERROR2: ", err)
+		pc, _ := conn.(*pool.PoolConn)
+		pc.MarkUnusable()
+		pc.Close()
 	} else {
 		fmt.Println("wrote ", n, " bytes")
 	}
 
 	reply, err := bufio.NewReader(conn).ReadString('\n')
-	if err != nil && err != io.EOF {
-		fmt.Println(err)
+	if err != nil {
+		fmt.Println("ERROR3: ", err)
 	}
 	fmt.Println("recvd: ", reply)
 
