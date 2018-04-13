@@ -99,7 +99,7 @@ func (s SocketServer) handleRequest(conn net.Conn) {
 	for {
 		recv, err := reader.ReadString('\n')
 		if err != nil {
-			fmt.Println(err)
+			fmt.Println("ERROR1: ", err)
 			return
 		}
 		if recv == "\n" { //weird...
@@ -117,7 +117,7 @@ func (s SocketServer) handleRequest(conn net.Conn) {
 			fmt.Printf("Error: command not implemented '%s'\n", command)
 			n, err := conn.Write([]byte("-1"))
 			if err != nil {
-				fmt.Println("ERR writing back response ", err)
+				fmt.Println("ERROR2 writing back response ", err)
 			} else {
 				fmt.Println("Wrote back ", n, " bytes")
 			}
@@ -131,7 +131,7 @@ func (s SocketServer) handleRequest(conn net.Conn) {
 		// Send a response back to person contacting us.
 		n, err := conn.Write([]byte(res))
 		if err != nil {
-			fmt.Println("ERR writing back response ", err)
+			fmt.Println("ERROR3 writing back response ", err)
 		} else {
 			fmt.Println("Wrote back ", n, " bytes")
 		}
