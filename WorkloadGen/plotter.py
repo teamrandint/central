@@ -69,42 +69,77 @@ def getColorStroke(endpoint):
         "CANCEL_SET_SELL":  ('b', '-.'),
     }[endpoint]
 
-df = pandas.read_csv('endpointStats.csv')
+df = pandas.read_csv('endpointStats_final_good.csv')
 df['duration'] /= 1000000 # nanoseconds to ms
 df['when'] -= df['when'].max() # relative times
 df['when'] /= 1e9 # nanos to s
 
-fig, ax = plt.subplots(sharex=True, sharey=True)
+def plot_by_command():
+    fig, ax = plt.subplots(sharex=True, sharey=True)
 
-for endpoint in endpoints:
-    color, stroke = getColorStroke(endpoint)
+    for endpoint in endpoints:
+        color, stroke = getColorStroke(endpoint)
 
-    subset = df.loc[df['ENDPOINT'] == endpoint]
-    subset['duration_smooth'] = subset['duration'].rolling(100).mean()
+        subset = df.loc[df['ENDPOINT'] == endpoint]
+        subset['duration_smooth'] = subset['duration']#.rolling(1000).mean()
 
-    '''
-    plt.scatter(
-        subset['when'],
-        subset['duration_smooth'],
-        label=endpoint,
-        color=color,
-        s=1,
-    )'''
-    plt.subplot(postion[endpoint], sharex=ax, sharey=ax)
-    plt.plot(
-        np.unique(subset['when']),
-        subset['duration_smooth'],
-        color=color,
-        label=endpoint,
-        linestyle=stroke,
-        linewidth=1,
+        #a = subset['when'][subset['when'].duplicated(keep=False)]
+        #print(a)
+        plt.subplot(postion[endpoint], sharex=ax, sharey=ax)
+        plt.plot(
+            np.unique(subset['when']),
+            subset['duration_smooth'],
+            color=color,
+            label=endpoint,
+            linestyle=stroke,
+            linewidth=1,
+        ) 
+
+        plt.legend(
+            loc='best',
+            prop={'size': 10},
+        )
+
+    plt.xlabel('Time to last request (s)')
+    plt.ylabel('Rolling avg of response time (ms)')
+    plt.show()
+
+def plot_by_time():
+    plt.xlabel('Response time per command (ms)')
+    plt.ylabel('Count')
+    plt.hist(
+        df['duration'],
+        bins=1000,
+        log=False,
+        range=(0,8000)
     )
+    plt.show()
 
-    plt.legend(
-        loc='best',
-        prop={'size': 10},
-    )
+def plot_time_stats():
 
-plt.xlabel('Time to last request (s)')
-plt.ylabel('Rolling avg of response time (ms)')
-plt.show()
+    print("AVERAGE: ", df['duration'].mean())
+    for n in range(1, 10):
+        print(
+            "% OF COMMANDS LESS THAN {}ms:".format(n),
+            (df['duration'] < n).mean()
+        )
+    for n in range(1, 10):
+        print(
+            "% OF COMMANDS LESS THAN {}ms:".format(n*10),
+            (df['duration'] < n*10).mean()
+        )
+    for n in range(1, 10):
+        print(
+            "% OF COMMANDS LESS THAN {}ms:".format(n*100),
+            (df['duration'] < n*100).mean()
+        )
+
+    for n in range(1, 10):
+        print(
+            "% OF COMMANDS LESS THAN {}s:".format(n),
+            (df['duration'] < n*1000).mean()
+        )
+    
+    print("MAX: ", df['duration'].max())
+
+plot_time_stats()
