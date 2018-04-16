@@ -110,8 +110,34 @@ def plot_by_time():
     plt.hist(
         df['duration'],
         bins=1000,
-        log=False,
+        log=True,
         range=(0,8000)
+    )
+    plt.show()
+
+def plot_multi_time():
+    df1 = pandas.read_csv('./statruns/endpointStats_1.csv')['duration'] / 1000000
+    df2 = pandas.read_csv('./statruns/endpointStats_2.csv')['duration'] / 1000000
+    df3 = pandas.read_csv('./statruns/endpointStats_5.csv')['duration'] / 1000000
+    df4 = pandas.read_csv('./statruns/endpointStats_6.csv')['duration'] / 1000000
+    df5 = pandas.read_csv('./statruns/endpointStats_7.csv')['duration'] / 1000000
+
+    
+    data = [df1.values,
+            df2.values,
+            df3.values,
+            df4.values,
+            df5.values,]
+
+    plt.xlabel('Response time per command (ms)')
+    plt.ylabel('Count')
+    plt.hist(
+        data,
+        bins=1000,
+        histtype='step',
+        stacked=False,
+        fill=False,
+        log=True,
     )
     plt.show()
 
@@ -120,26 +146,77 @@ def plot_time_stats():
     print("AVERAGE: ", df['duration'].mean())
     for n in range(1, 10):
         print(
-            "% OF COMMANDS LESS THAN {}ms:".format(n),
-            (df['duration'] < n).mean()
+            "COMMANDS LESS THAN {}ms:".format(n),
+            (df['duration'] < n).mean(),
         )
     for n in range(1, 10):
         print(
-            "% OF COMMANDS LESS THAN {}ms:".format(n*10),
+            "COMMANDS LESS THAN {}ms:".format(n*10),
             (df['duration'] < n*10).mean()
         )
     for n in range(1, 10):
         print(
-            "% OF COMMANDS LESS THAN {}ms:".format(n*100),
+            "COMMANDS LESS THAN {}ms:".format(n*100),
             (df['duration'] < n*100).mean()
         )
 
-    for n in range(1, 10):
+    for n in range(1, 11):
         print(
-            "% OF COMMANDS LESS THAN {}s:".format(n),
+            "COMMANDS LESS THAN {}s:".format(n),
             (df['duration'] < n*1000).mean()
         )
     
     print("MAX: ", df['duration'].max())
 
-plot_time_stats()
+def plot_tps():
+    print(df['when'].min())
+    plt.xlabel('Time to last request (s)')
+    plt.ylabel('TPS')
+    plt.hist(
+        df['when'],
+        bins=abs(int(df['when'].min() )),
+        log=False,
+        range=(int(df['when'].min() ), 0)
+    )
+    plt.show()
+
+def plot_multi_tps():
+    df1 = pandas.read_csv('./statruns/endpointStats_1.csv')['when'] 
+    df2 = pandas.read_csv('./statruns/endpointStats_2.csv')['when']
+    df3 = pandas.read_csv('./statruns/endpointStats_5.csv')['when']
+    df4 = pandas.read_csv('./statruns/endpointStats_6.csv')['when']
+    df5 = pandas.read_csv('./statruns/endpointStats_7.csv')['when']
+
+    df1 -= df1.min()
+    df2 -= df2.min()
+    df3 -= df3.min()
+    df4 -= df4.min()
+    df5 -= df5.min()
+
+    df1 /= 1e9 # nanos to s
+    df2 /= 1e9 # nanos to s
+    df3 /= 1e9 # nanos to s
+    df4 /= 1e9 # nanos to s
+    df5 /= 1e9 # nanos to s
+    data = [df1.values,
+            df2.values,
+            df3.values,
+            df4.values,
+            df5.values,]
+
+
+    plt.xlabel('Time until last command (s)')
+    plt.ylabel('TPS')
+    plt.hist(
+        data,
+        bins=120,
+        range=(0, 120),
+        histtype='step',
+        stacked=False,
+        fill=False,
+        log=True,
+    )
+    plt.show()
+
+
+plot_multi_time()
